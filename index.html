@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Guess-A-Word</title>
     <style>
         :root {
@@ -15,18 +15,57 @@
             --key-bg: #818384;
         }
 
+        /* --- NEW LAYOUT STYLES FOR ADS --- */
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
             background-color: var(--default);
             color: var(--text);
+            margin: 0;
+            min-height: 100vh;
+            
+            /* This aligns the Left Ad | Game | Right Ad side-by-side */
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; 
+            overflow-x: hidden; /* Prevent horizontal scroll */
+        }
+
+        /* This wrapper acts as the 'body' for your game logic, keeping it vertical */
+        #game-wrapper {
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: space-between; 
-            margin: 0;
+            justify-content: space-between;
             height: 100vh;
-            overflow: hidden; 
+            width: 100%;
+            max-width: 500px; /* Keeps game looking like an app */
+            position: relative;
+            flex-shrink: 0; /* Prevents game from squishing when ads load */
         }
+
+        /* The Ad Sidebars */
+        .ad-sidebar {
+            width: 160px;
+            height: 600px;
+            margin-top: 40px; /* Push ads down a little */
+            background-color: #1a1a1b; /* Placeholder color - remove later */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #555;
+            border: 1px dashed #444;
+        }
+
+        .left-ad { margin-right: 20px; }
+        .right-ad { margin-left: 20px; }
+
+        /* CRITICAL: HIDE ADS ON MOBILE/TABLET */
+        @media (max-width: 900px) {
+            .ad-sidebar { display: none !important; }
+        }
+
+        /* --- ORIGINAL GAME STYLES BELOW --- */
 
         h1 {
             border-bottom: 1px solid var(--border);
@@ -34,9 +73,9 @@
             margin: 0;
             font-size: 1.5rem;
             text-align: center;
+            width: 100%;
         }
 
-        /* Game Board */
         #board-container {
             display: grid;
             grid-template-rows: repeat(6, 1fr);
@@ -46,7 +85,7 @@
             flex-grow: 1;
             justify-content: center;
             align-content: center;
-            max-height: 420px; /* Prevent board from getting too tall on large screens */
+            max-height: 420px;
         }
 
         .row {
@@ -69,11 +108,9 @@
             box-sizing: border-box;
         }
 
-        /* Keyboard Styles */
         #keyboard-container {
             margin-bottom: 20px;
             width: 100%;
-            max-width: 500px;
             padding: 0 8px;
             box-sizing: border-box;
         }
@@ -111,46 +148,16 @@
             font-size: 0.8rem;
         }
 
-        /* States */
-        .tile.filled {
-            border-color: #818384;
-            animation: pop 0.1s;
-        }
+        /* States & Animation */
+        .tile.filled { border-color: #818384; animation: pop 0.1s; }
+        .tile.flip { animation: flip 0.6s ease-in; }
+        .correct { background-color: var(--correct) !important; border-color: var(--correct) !important; }
+        .present { background-color: var(--present) !important; border-color: var(--present) !important; }
+        .absent { background-color: var(--absent) !important; border-color: var(--absent) !important; }
 
-        .tile.flip {
-            animation: flip 0.6s ease-in;
-        }
+        @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        @keyframes flip { 0% { transform: rotateX(0); } 50% { transform: rotateX(90deg); } 100% { transform: rotateX(0); } }
 
-        /* Color Classes */
-        .correct { 
-            background-color: var(--correct) !important; 
-            border-color: var(--correct) !important; 
-        }
-        
-        .present { 
-            background-color: var(--present) !important; 
-            border-color: var(--present) !important; 
-        }
-        
-        .absent { 
-            background-color: var(--absent) !important; 
-            border-color: var(--absent) !important; 
-        }
-
-        /* Animations */
-        @keyframes pop {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-        }
-
-        @keyframes flip {
-            0% { transform: rotateX(0); }
-            50% { transform: rotateX(90deg); }
-            100% { transform: rotateX(0); }
-        }
-
-        /* Message */
         #message-container {
             height: 30px;
             display: flex;
@@ -158,6 +165,7 @@
             justify-content: center;
             font-weight: bold;
             z-index: 10;
+            width: 100%;
         }
 
         .toast {
@@ -191,20 +199,29 @@
 </head>
 <body>
 
-    <h1>Guess-A-Word</h1>
-    
-    <div id="message-container"></div>
-    
-    <div id="board-container"></div>
+    <div class="ad-sidebar left-ad">
+        <p>Ad Space<br>(Hidden on Mobile)</p>
+    </div>
 
-    <button id="restart-btn" onclick="initGame()">Play Again</button>
+    <div id="game-wrapper">
+        <h1>Guess-A-Word</h1>
+        
+        <div id="message-container"></div>
+        
+        <div id="board-container"></div>
 
-    <div id="keyboard-container"></div>
+        <button id="restart-btn" onclick="initGame()">Play Again</button>
+
+        <div id="keyboard-container"></div>
+    </div>
+
+    <div class="ad-sidebar right-ad">
+        <p>Ad Space<br>(Hidden on Mobile)</p>
+    </div>
 
     <script>
         // --- EXPANDED CONFIGURATION ---
-        
-        // 1. Answers: Common words that are fun to guess
+        // (Your huge list of words is preserved here)
         const answers = [
             "APPLE", "BEACH", "BRAIN", "BREAD", "BRUSH", "CHAIR", "CHEST", "CHORD", 
             "CLICK", "CLOCK", "CLOUD", "DANCE", "DIARY", "DRINK", "DRIVE", "EARTH", 
@@ -257,9 +274,9 @@
             "WHITE", "WHOLE", "WOMAN", "WORLD", "WORRY", "WRITE", "WRONG", "YOUTH"
         ];
 
-        // 2. Extra Allowed Guesses: Valid words but obscure (prevents "Not in list" errors)
+        // 2. Extra Allowed Guesses (Preserved)
         const extras = [
-            "AAHED", "ABACA", "ABACI", "ABACK", "ABAFT", "ABBAS", "ABBES", "ABEYS",
+             "AAHED", "ABACA", "ABACI", "ABACK", "ABAFT", "ABBAS", "ABBES", "ABEYS",
             "ABIDE", "ABLED", "ABLER", "ABOOD", "ABORT", "ABOSM", "ABOUT", "ABOVE",
             "ABUSE", "ABUTS", "ABUZZ", "ABYES", "ACERB", "ACIDS", "ACORN", "ACRED",
             "ACRES", "ACRID", "ACTED", "ACTIN", "ACTOR", "ACUTE", "ADAGE", "ADAPT",
