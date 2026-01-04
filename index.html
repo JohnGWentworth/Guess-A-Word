@@ -108,7 +108,7 @@
 
         // --- GAME CONFIG & DATA ---
 
-        const STORAGE_KEY = 'wordQuestSave_v3'; 
+        const BASE_STORAGE_KEY = 'wordQuestSave_v4'; // Changed to v4 for new save format
         const DAILY_STORAGE_KEY = 'wordQuestDaily_v1';
         const STATS_STORAGE_KEY = 'wordQuestStats_v1';
         const MAX_GUESSES = 6;
@@ -305,6 +305,10 @@
             const monster = toughMonsters[monsterIdx];
             
             return { word, monster };
+        }
+
+        const getSaveKey = (difficulty) => {
+            return `${BASE_STORAGE_KEY}_${difficulty}`;
         }
 
         const Header = ({ level, hp, maxHp, gold, remaining, buffs, isDaily, onMenu }) => (
@@ -542,8 +546,9 @@
           const [feedbackMsg, setFeedbackMsg] = useState("");
 
           useEffect(() => {
-            const savedData = localStorage.getItem(STORAGE_KEY);
-            if (savedData) setHasSave(true);
+            const key = getSaveKey(difficulty);
+            setHasSave(!!localStorage.getItem(key));
+            
             const dailyData = localStorage.getItem(DAILY_STORAGE_KEY);
             if (dailyData) {
                 const { date } = JSON.parse(dailyData);
@@ -557,13 +562,14 @@
                 setShowRules(true);
                 localStorage.setItem('wordQuestVisited', 'true');
             }
-          }, []);
+          }, [difficulty]);
 
           const saveGameData = (data) => {
             if (isDailyRun) return;
             try {
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-              setHasSave(true);
+              const key = getSaveKey(data.difficulty || difficulty);
+              localStorage.setItem(key, JSON.stringify(data));
+              if (data.difficulty === difficulty) setHasSave(true);
             } catch (e) { console.error("Save failed:", e); }
           };
 
@@ -577,45 +583,76 @@
               const data = { date: new Date().toDateString(), completed: true };
               localStorage.setItem(DAILY_STORAGE_KEY, JSON.stringify(data));
               setDailyCompleted(true);
-              let currentSave = {};
-              try {
-                  const saved = localStorage.getItem(STORAGE_KEY);
-                  if (saved) currentSave = JSON.parse(saved);
-              } catch(e) {}
-              const newGold = (currentSave.gold || 0) + 200;
-              const newSave = { 
-                  ...currentSave, 
-                  gold: newGold,
-                  hp: currentSave.hp || STARTING_HP,
-                  maxHp: currentSave.maxHp || STARTING_HP,
-                  level: currentSave.level || 1
-              };
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(newSave));
-              setGold(newGold);
-              setHasSave(true);
+              
+              // Add gold to ALL active saves
+              ['EASY', 'NORMAL', 'HARD'].forEach(diff => {
+                  try {
+                      const key = getSaveKey(diff);
+                      const saved = localStorage.getItem(key);
+                      if (saved) {
+                          const currentSave = JSON.parse(saved);
+                          const newGold = (currentSave.gold || STARTING_GOLD) + 200;
+                          const newSave = { ...currentSave, gold: newGold };
+                          localStorage.setItem(key, JSON.stringify(newSave));
+                      }
+                  } catch(e) {}
+              });
+              
+              // Update current state if not daily (unlikely here but safe)
+              if(!isDailyRun) setGold(prev => prev + 200);
           };
 
           const loadGame = () => {
             try {
-              const saved = localStorage.getItem(STORAGE_KEY);
+              const key = getSaveKey(difficulty);
+              const saved = localStorage.getItem(key);
               if (saved) {
                 const data = JSON.parse(saved);
-                setHp(data.hp);
-                setMaxHp(data.maxHp);
-                setGold(data.gold);
-                setLevel(data.level);
-                setActiveBuffs(data.activeBuffs || {});
-                setDifficulty(data.difficulty || 'NORMAL');
-                setAvailableWords(data.availableWords || []);
-                setTargetWord(data.targetWord || "");
-                setCurrentMonster(data.currentMonster || MONSTERS[0]);
-                setGuesses([]);
-                setCurrentGuess("");
-                setTurn(0);
-                setUsedLetters({});
-                setRevealedIndices(data.revealedIndices || []);
+                
+                // Force daily mode off immediately when loading a main save
                 setIsDailyRun(false);
-                setGameState('PLAYING');
+
+                // --- CRITICAL FIX: REPAIR CORRUPTED SAVE ---
+                if (!data.targetWord || !data.availableWords || data.availableWords.length === 0) {
+                    console.log("Repairing save file...");
+                    setHp(data.hp || STARTING_HP);
+                    setMaxHp(data.maxHp || STARTING_HP);
+                    setGold(data.gold || STARTING_GOLD);
+                    setLevel(data.level || 1);
+                    setDifficulty(data.difficulty || difficulty);
+                    
+                    // Regenerate words based on saved difficulty
+                    let filteredWords = WORD_LIST;
+                    const diff = data.difficulty || difficulty;
+                    if (diff === 'EASY') filteredWords = WORD_LIST.filter(w => w.length >= 4 && w.length <= 5);
+                    else if (diff === 'NORMAL') filteredWords = WORD_LIST.filter(w => w.length >= 4 && w.length <= 6);
+                    else if (diff === 'HARD') filteredWords = WORD_LIST.filter(w => w.length >= 5);
+                    
+                    const uniqueWords = [...new Set(filteredWords)];
+                    setAvailableWords(uniqueWords);
+                    
+                    // Start fresh level immediately
+                    setTimeout(() => startLevel(data.level || 1, uniqueWords, {}, false), 50);
+                } else {
+                    // Standard Load
+                    setHp(data.hp);
+                    setMaxHp(data.maxHp);
+                    setGold(data.gold);
+                    setLevel(data.level);
+                    setActiveBuffs(data.activeBuffs || {});
+                    setDifficulty(data.difficulty || difficulty);
+                    setAvailableWords(data.availableWords);
+                    setTargetWord(data.targetWord);
+                    setCurrentMonster(data.currentMonster || MONSTERS[0]);
+                    setGuesses([]);
+                    setCurrentGuess("");
+                    setTurn(0);
+                    setUsedLetters({});
+                    setRevealedIndices(data.revealedIndices || []);
+                    
+                    setGameState('PLAYING');
+                }
+                setFeedbackMsg(""); 
               }
             } catch (e) {
               console.error("Load failed:", e);
@@ -628,11 +665,14 @@
             if (!isDailyRun) {
                 saveGameData({ hp, maxHp, gold, level, activeBuffs, difficulty, availableWords, targetWord, currentMonster, revealedIndices });
             }
+            setIsDailyRun(false); // Reset daily flag when going to menu to prevent bleed-over
             setGameState('MENU');
+            setFeedbackMsg(""); // Clear popups when leaving
           };
 
           const startGame = () => {
-            localStorage.removeItem(STORAGE_KEY);
+            const key = getSaveKey(difficulty);
+            localStorage.removeItem(key);
             setHasSave(false);
             setHp(STARTING_HP);
             setMaxHp(STARTING_HP);
@@ -675,7 +715,8 @@
           const startLevel = (lvl, currentBag = availableWords, currentBuffs = activeBuffs, isNewGame = false) => {
             if (currentBag.length === 0) {
                 setGameState('VICTORY');
-                localStorage.removeItem(STORAGE_KEY);
+                const key = getSaveKey(difficulty);
+                localStorage.removeItem(key);
                 return;
             }
             const randomIndex = Math.floor(Math.random() * currentBag.length);
@@ -826,7 +867,8 @@
 
           const confirmGameOver = () => {
             if (!isDailyRun) {
-                localStorage.removeItem(STORAGE_KEY);
+                const key = getSaveKey(difficulty);
+                localStorage.removeItem(key);
                 setHasSave(false);
                 const currentModeKey = difficulty === 'EASY' ? 'highScoreEasy' : difficulty === 'NORMAL' ? 'highScoreNormal' : 'highScoreHard';
                 if (level > stats[currentModeKey]) {
