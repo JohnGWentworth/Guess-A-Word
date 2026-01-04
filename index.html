@@ -2,751 +2,1291 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Guess-A-Word</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Quest RPG - Daily Word Puzzle</title>
     
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9610577818327831"
-     crossorigin="anonymous"></script>
+    <!-- Meta Tags for SEO -->
+    <meta name="description" content="Play Word Quest RPG, a free daily roguelike word puzzle game. Battle monsters, collect gold, and climb the Cursed Tower.">
+    <meta name="keywords" content="word game, rpg, roguelike, puzzle, daily challenge, wordle rpg">
+    <meta name="author" content="GuessAWord.org">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     
+    <!-- Babel (Translates JSX in browser) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
     <style>
-        :root {
-            --correct: #6aaa64;  /* Green */
-            --present: #c9b458;  /* Yellow */
-            --absent: #e53e3e;   /* RED */
-            --default: #121213;  /* Background */
-            --border: #3a3a3c;
-            --text: #ffffff;
-            --key-bg: #818384;
+        /* Custom Animations */
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-5px); }
+          75% { transform: translateX(5px); }
         }
-
-        /* --- NEW LAYOUT STYLES FOR ADS --- */
-        body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            background-color: var(--default);
-            color: var(--text);
-            margin: 0;
-            min-height: 100vh;
-            
-            /* This aligns the Left Ad | Game | Right Ad side-by-side */
-            display: flex;
-            justify-content: center;
-            align-items: flex-start; 
-            overflow-x: hidden; /* Prevent horizontal scroll */
+        @keyframes pop {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.1); }
+          100% { transform: scale(1); }
         }
-
-        /* This wrapper acts as the 'body' for your game logic, keeping it vertical */
-        #game-wrapper {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: space-between;
-            height: 100vh;
-            width: 100%;
-            max-width: 500px; /* Keeps game looking like an app */
-            position: relative;
-            flex-shrink: 0; /* Prevents game from squishing when ads load */
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
         }
-
-        /* The Ad Sidebars */
-        .ad-sidebar {
-            width: 160px;
-            height: 600px;
-            margin-top: 40px; /* Push ads down a little */
-            background-color: #1a1a1b; /* Placeholder color - remove later */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            color: #555;
-            border: 1px dashed #444;
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
-
-        .left-ad { margin-right: 20px; }
-        .right-ad { margin-left: 20px; }
-
-        /* CRITICAL: HIDE ADS ON MOBILE/TABLET */
-        @media (max-width: 900px) {
-            .ad-sidebar { display: none !important; }
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translate(-50%, -40%); }
+          to { opacity: 1; transform: translate(-50%, -50%); }
         }
-
-        /* --- ORIGINAL GAME STYLES BELOW --- */
-
-        h1 {
-            border-bottom: 1px solid var(--border);
-            padding: 10px 0;
-            margin: 0;
-            font-size: 1.5rem;
-            text-align: center;
-            width: 100%;
-        }
-
-        #board-container {
-            display: grid;
-            grid-template-rows: repeat(6, 1fr);
-            gap: 5px;
-            padding: 10px;
-            box-sizing: border-box;
-            flex-grow: 1;
-            justify-content: center;
-            align-content: center;
-            max-height: 420px;
-        }
-
-        .row {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 5px;
-        }
-
-        .tile {
-            width: 52px;
-            height: 52px;
-            border: 2px solid var(--border);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 1.8rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            user-select: none;
-            box-sizing: border-box;
-        }
-
-        #keyboard-container {
-            margin-bottom: 20px;
-            width: 100%;
-            padding: 0 8px;
-            box-sizing: border-box;
-        }
-
-        .keyboard-row {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 8px;
-            width: 100%;
-            touch-action: manipulation;
-        }
-
-        .key {
-            font-family: inherit;
-            font-weight: bold;
-            border: 0;
-            padding: 0;
-            margin: 0 3px;
-            height: 58px;
-            border-radius: 4px;
-            cursor: pointer;
-            user-select: none;
-            background-color: var(--key-bg);
-            color: var(--text);
-            flex: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            text-transform: uppercase;
-            font-size: 0.9rem;
-        }
-
-        .key.large {
-            flex: 1.5;
-            font-size: 0.8rem;
-        }
-
-        /* States & Animation */
-        .tile.filled { border-color: #818384; animation: pop 0.1s; }
-        .tile.flip { animation: flip 0.6s ease-in; }
-        .correct { background-color: var(--correct) !important; border-color: var(--correct) !important; }
-        .present { background-color: var(--present) !important; border-color: var(--present) !important; }
-        .absent { background-color: var(--absent) !important; border-color: var(--absent) !important; }
-
-        @keyframes pop { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-        @keyframes flip { 0% { transform: rotateX(0); } 50% { transform: rotateX(90deg); } 100% { transform: rotateX(0); } }
-
-        #message-container {
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            z-index: 10;
-            width: 100%;
-        }
-
-        .toast {
-            background-color: #fff;
-            color: #000;
-            padding: 10px 20px;
-            border-radius: 4px;
-        }
-
-        #restart-btn {
-            padding: 10px 20px;
-            font-size: 1rem;
-            cursor: pointer;
-            background-color: var(--correct);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            display: none;
-        }
-
-        /* Mobile Optimization */
-        @media (max-height: 700px) {
-            .tile { width: 40px; height: 40px; font-size: 1.5rem; }
-            .key { height: 45px; }
-            h1 { font-size: 1.2rem; }
-            #board-container { max-height: 350px; }
+        .animate-shake { animation: shake 0.4s ease-in-out; }
+        .animate-pop { animation: pop 0.1s ease-in-out; }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+        .animate-fade-in-up { animation: fadeInUp 0.3s ease-out; }
+        .flip-in { animation: flip 0.6s ease forwards; }
+        @keyframes flip {
+          0% { transform: rotateX(0); }
+          50% { transform: rotateX(90deg); }
+          100% { transform: rotateX(0); }
         }
     </style>
 </head>
-<body>
+<body class="bg-slate-950 text-slate-100">
+    <div id="root"></div>
 
-    <div class="ad-sidebar left-ad">
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9610577818327831"
-     crossorigin="anonymous"></script>
-<!-- Left Sidebar -->
-<ins class="adsbygoogle"
-     style="display:inline-block;width:160px;height:600px"
-     data-ad-client="ca-pub-9610577818327831"
-     data-ad-slot="1265701973"></ins>
-<script>
-     (adsbygoogle = window.adsbygoogle || []).push({});
-</script>
-    </div>
+    <script type="text/babel">
+        const { useState, useEffect, useCallback, useRef } = React;
 
-    <div id="game-wrapper">
-        <h1>Guess-A-Word</h1>
-        
-        <div id="message-container"></div>
-        
-        <div id="board-container"></div>
+        // --- ICONS (Inlined to avoid CDN issues) ---
+        const Icon = ({ children, size = 24, className = "" }) => (
+            <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width={size} 
+                height={size} 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className={className}
+            >
+                {children}
+            </svg>
+        );
 
-        <button id="restart-btn" onclick="initGame()">Play Again</button>
+        const Icons = {
+            Heart: (props) => <Icon {...props}><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></Icon>,
+            Coins: (props) => <Icon {...props}><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></Icon>,
+            Shield: (props) => <Icon {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></Icon>,
+            Sparkles: (props) => <Icon {...props}><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"/></Icon>,
+            Skull: (props) => <Icon {...props}><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M8 20v2h8v-2"/><path d="m12.5 17-.5-1-.5 1h1z"/><path d="M16 20a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20"/></Icon>,
+            Scroll: (props) => <Icon {...props}><path d="M8 17.5a2.5 2.5 0 0 1-2.5-2.5V3a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v12a2.5 2.5 0 0 1-2.5 2.5H8Z"/><path d="M19 19a2 2 0 0 1-2 2H8a4 4 0 0 1-4-4v-9"/></Icon>,
+            Sword: (props) => <Icon {...props}><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="m13 19 6-6"/><path d="m16 16 4 4"/><path d="m19 21 2-2"/></Icon>,
+            Trophy: (props) => <Icon {...props}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M9 22v-2.5a2.5 2.5 0 0 1 5 0V22"/><path d="M18 13.5a6 6 0 0 1-12 0V4h12z"/></Icon>,
+            Share2: (props) => <Icon {...props}><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></Icon>,
+            Zap: (props) => <Icon {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></Icon>,
+            Gem: (props) => <Icon {...props}><path d="M6 3h12l4 6-10 13L2 9Z"/></Icon>,
+            Save: (props) => <Icon {...props}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v13a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></Icon>,
+            X: (props) => <Icon {...props}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></Icon>,
+            HelpCircle: (props) => <Icon {...props}><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></Icon>,
+            Calendar: (props) => <Icon {...props}><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></Icon>,
+            FileText: (props) => <Icon {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></Icon>,
+            Info: (props) => <Icon {...props}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></Icon>,
+            Home: (props) => <Icon {...props}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></Icon>,
+            BarChart2: (props) => <Icon {...props}><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></Icon>,
+            Mail: (props) => <Icon {...props}><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></Icon>
+        };
 
-        <div id="keyboard-container"></div>
-    </div>
+        const { Heart, Coins, Shield, Sparkles, Skull, Scroll, Sword, Trophy, Share2, Zap, Gem, Save, X, HelpCircle, Calendar, FileText, Info, Home, BarChart2, Mail } = Icons;
 
-    <div class="ad-sidebar right-ad">
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9610577818327831"
-     crossorigin="anonymous"></script>
-<!-- Right Sidebar -->
-<ins class="adsbygoogle"
-     style="display:inline-block;width:160px;height:600px"
-     data-ad-client="ca-pub-9610577818327831"
-     data-ad-slot="4217677680"></ins>
-<script>
-     (adsbygoogle = window.adsbygoogle || []).push({});
-</script>
-    </div>
+        // --- GAME CONFIG & DATA ---
 
-    <script>
-        // --- EXPANDED CONFIGURATION ---
-        // (Your huge list of words is preserved here)
-        const answers = [
-            "APPLE", "BEACH", "BRAIN", "BREAD", "BRUSH", "CHAIR", "CHEST", "CHORD", 
-            "CLICK", "CLOCK", "CLOUD", "DANCE", "DIARY", "DRINK", "DRIVE", "EARTH", 
-            "FEAST", "FIELD", "FRUIT", "GLASS", "GRAPE", "GREEN", "GHOST", "HEART", 
-            "HOUSE", "JUICE", "LIGHT", "LEMON", "MELON", "MONEY", "MUSIC", "NIGHT", 
-            "OCEAN", "PARTY", "PIZZA", "PHONE", "PILOT", "PLANE", "PLANT", "PLATE", 
-            "POWER", "RADIO", "RIVER", "ROBOT", "SHOES", "SHIRT", "SNAKE", "SPACE", 
-            "SPOON", "STORM", "TABLE", "TOAST", "TIGER", "TRAIN", "WATER", "WATCH", 
-            "WHALE", "WORLD", "WRITE", "YOUTH", "ZEBRA", "ALARM", "ANGRY", "BAKER",
-            "ADULT", "ALBUM", "ALPHA", "ANGEL", "APPLE", "ASSET", "AUDIO", "AWARD",
-            "BASIC", "BASIN", "BATCH", "BEARD", "BEAST", "BENCH", "BIRTH", "BLACK",
-            "BLADE", "BLAME", "BLANK", "BLAST", "BLEND", "BLOCK", "BLOOD", "BOARD",
-            "BRAIN", "BRAND", "BREAD", "BREAK", "BRICK", "BRIEF", "BROAD", "BROWN",
-            "BUILD", "BURST", "CABIN", "CABLE", "CANDY", "CARGO", "CARRY", "CATCH",
-            "CAUSE", "CHAIN", "CHAIR", "CHART", "CHASE", "CHEAP", "CHECK", "CHEST",
-            "CHIEF", "CHILD", "CHINA", "CIVIL", "CLAIM", "CLASS", "CLEAN", "CLEAR",
-            "CLOCK", "CLOSE", "COACH", "COAST", "COLOR", "COUNT", "COURT", "COVER",
-            "CRAFT", "CRASH", "CREAM", "CRIME", "CROSS", "CROWD", "CROWN", "CYCLE",
-            "DANCE", "DEATH", "DEPTH", "DOUBT", "DRAFT", "DRAMA", "DREAM", "DRESS",
-            "DRINK", "DRIVE", "EARTH", "ENTRY", "EQUAL", "ERROR", "EVENT", "EXACT",
-            "EXIST", "EXTRA", "FAITH", "FAULT", "FIBER", "FIELD", "FINAL", "FIRST",
-            "FLASH", "FLEET", "FLOOR", "FLUID", "FOCUS", "FORCE", "FRAME", "FRANK",
-            "FRESH", "FRONT", "FRUIT", "FUNNY", "GIANT", "GLASS", "GLOBE", "GOING",
-            "GRACE", "GRADE", "GRAND", "GRANT", "GRASS", "GREAT", "GREEN", "GROSS",
-            "GROUP", "GUARD", "GUESS", "GUEST", "GUIDE", "HAPPY", "HEART", "HEAVY",
-            "HELLO", "HONEY", "HORSE", "HOTEL", "HOUSE", "HUMAN", "IDEAL", "IMAGE",
-            "INDEX", "INPUT", "ISSUE", "JAPAN", "JOINT", "JUDGE", "KNIFE", "LAUGH",
-            "LAYER", "LEARN", "LEASE", "LEAVE", "LEGAL", "LEVEL", "LIGHT", "LIMIT",
-            "LOCAL", "LOGIC", "LOOSE", "LUCKY", "LUNCH", "MAGIC", "MAJOR", "MAKER",
-            "MARCH", "MATCH", "METAL", "MODEL", "MONEY", "MONTH", "MORAL", "MOTOR",
-            "MOUNT", "MOUSE", "MOUTH", "MOVIE", "MUSIC", "NEEDS", "NIGHT", "NOISE",
-            "NORTH", "NOVEL", "NURSE", "OCEAN", "OFFER", "OFTEN", "ORDER", "OTHER",
-            "OWNER", "PANEL", "PAPER", "PARTY", "PEACE", "PHASE", "PHONE", "PHOTO",
-            "PIECE", "PILOT", "PITCH", "PLACE", "PLANE", "PLANT", "PLATE", "POINT",
-            "POUND", "POWER", "PRESS", "PRICE", "PRIDE", "PRIZE", "PROOF", "PROUD",
-            "QUEEN", "QUICK", "QUIET", "QUITE", "RADIO", "RAISE", "RANGE", "RAPID",
-            "RATIO", "REACH", "REPLY", "RIGHT", "RIVER", "ROUND", "ROUTE", "ROYAL",
-            "RURAL", "SCALE", "SCENE", "SCOPE", "SCORE", "SENSE", "SERVE", "SHARE",
-            "SHARP", "SHEEP", "SHEET", "SHIFT", "SHIRT", "SHOCK", "SHOOT", "SHORT",
-            "SIGHT", "SINCE", "SKILL", "SLEEP", "SLIDE", "SMALL", "SMART", "SMILE",
-            "SMOKE", "SOLID", "SOLVE", "SORRY", "SOUND", "SOUTH", "SPACE", "SPARE",
-            "SPEAK", "SPEED", "SPEND", "SPITE", "SPLIT", "SPORT", "SQUAD", "STAFF",
-            "STAGE", "STAND", "START", "STATE", "STEAM", "STEEL", "STICK", "STILL",
-            "STOCK", "STONE", "STORE", "STORM", "STORY", "STRIP", "STUDY", "STUFF",
-            "STYLE", "SUGAR", "SUPER", "SWEET", "TABLE", "TASTE", "TEACH", "THANK",
-            "THEME", "THING", "THINK", "THROW", "TIGHT", "TITLE", "TOTAL", "TOUCH",
-            "TOWER", "TRACK", "TRADE", "TRAIN", "TREAT", "TREND", "TRIAL", "TRUCK",
-            "TRUST", "TRUTH", "UNCLE", "UNION", "UNITY", "VALUE", "VIDEO", "VIRUS",
-            "VISIT", "VOICE", "WASTE", "WATCH", "WATER", "WHEEL", "WHERE", "WHILE",
-            "WHITE", "WHOLE", "WOMAN", "WORLD", "WORRY", "WRITE", "WRONG", "YOUTH"
+        const STORAGE_KEY = 'wordQuestSave_v3'; 
+        const DAILY_STORAGE_KEY = 'wordQuestDaily_v1';
+        const STATS_STORAGE_KEY = 'wordQuestStats_v1';
+        const MAX_GUESSES = 6;
+        const STARTING_HP = 150;
+        const STARTING_GOLD = 0;
+        const MIN_REVIVE_GOLD = 50; 
+
+        // LARGE DICTIONARY (Mix of 4, 5, 6, 7 letter words)
+        const WORD_LIST = [
+          "SWORD", "MAGIC", "POWER", "GHOST", "SLIME", "SHIELD", "ARROW", "SPEAR", "BLADE", "ARMOR",
+          "BEAST", "WITCH", "DEMON", "DEVIL", "DRAGON", "ELVES", "FAIRY", "GIANT", "GNOME", "GOLEM",
+          "HYDRA", "KRAKEN", "MUMMY", "NINJA", "OGRES", "ORCS",  "PIXIE", "ROBOT", "TROLL", "VAMPIRE",
+          "ZOMBIE", "ABYSS", "ALTAR", "ANVIL", "ARENA", "BARON", "BASIN", "BEARD", "BISON", "BLOOD",
+          "CASTLE", "DUNGEON", "TEMPLE", "SHRINE", "CRYPT", "GRAVE", "TOMB", "RUINS", "TOWER", "KEEP",
+          "MOAT", "GATE", "WALLS", "BRIDGE", "TORCH", "FLAME", "EMBER", "ASHES", "SMOKE", "FIRE",
+          "WATER", "RIVER", "OCEAN", "STORM", "WIND", "RAIN", "THUNDER", "LIGHT", "DARK", "SHADOW",
+          "NIGHT", "MOON", "STARS", "SOLAR", "LUNAR", "CLOUDS", "SKY", "EARTH", "STONE", "ROCK",
+          "IRON", "STEEL", "GOLD", "SILVER", "BRONZE", "COPPER", "JEWEL", "GEM", "RUBY", "OPAL",
+          "PEARL", "DIAMOND", "CRYSTAL", "GLASS", "MIRROR", "POTION", "ELIXIR", "FLASK", "VIAL", "BREW",
+          "SCROLL", "BOOK", "TOME", "PAGE", "RUNE", "GLYPH", "SIGIL", "MARK", "SYMBOL", "SIGN",
+          "KING", "QUEEN", "PRINCE", "LORD", "LADY", "KNIGHT", "SQUIRE", "GUARD", "SCOUT", "THIEF",
+          "ROGUE", "MAGE", "CLERIC", "PRIEST", "MONK", "BARD", "DRUID", "RANGER", "HUNTER", "SLAYER",
+          "HERO", "VILLAIN", "BOSS", "MOB", "LOOT", "CHEST", "KEY", "LOCK", "TRAP", "DOOR",
+          "QUEST", "TASK", "JOB", "MISSION", "GOAL", "PRIZE", "REWARD", "BOUNTY", "FAME", "GLORY",
+          "SKILL", "STAT", "LEVEL", "RANK", "CLASS", "RACE", "GUILD", "PARTY", "TEAM", "ALLY",
+          "ENEMY", "FOE", "RIVAL", "BOSS", "FINAL", "STAGE", "ZONE", "AREA", "MAP", "WORLD",
+          "PALADIN", "WARRIOR", "WIZARD", "SORCERER", "WARLOCK", "GOBLIN", "KOBOLD", "SPECTRE", "WRAITH",
+          "PHOENIX", "GRIFFIN", "WYVERN", "CYCLOPS", "MEDUSA", "CHIMERA", "MINOTAUR", "HARPY", "SIREN",
+          "BANSHEE", "LICHE", "ZOMBIES", "SKELETON", "VAMPIRES", "WEREWOLF", "PEGASUS", "UNICORN",
+          "MERMAID", "CENTAUR", "DRYAD", "NYMPH", "SATYR", "ELEMENT", "SPIRIT", "SHADOW", "LIGHT",
+          "THUNDER", "LIGHTNING", "BLIZZARD", "TORNADO", "QUAKE", "VOLCANO", "ERUPTION", "INFERNO",
+          "GLACIER", "AVALANCHE", "TSUNAMI", "HURRICANE", "CYCLONE", "TYPHOON", "DROUGHT", "FAMINE",
+          "PLAGUE", "PESTILENCE", "DISEASE", "POISON", "VENOM", "TOXIN", "ACID", "SLIME", "OOZE",
+          "MUD", "SWAMP", "BOG", "MARSH", "FOREST", "JUNGLE", "DESERT", "TUNDRA", "WASTELAND",
+          "KINGDOM", "EMPIRE", "NATION", "COUNTRY", "CITY", "TOWN", "VILLAGE", "HAMLET", "OUTPOST",
+          "FORTRESS", "CITADEL", "PALACE", "MANSION", "COTTAGE", "HOVEL", "SHACK", "TENT", "CAMP",
+          "BARRACKS", "ARMORY", "FORGE", "SMITHY", "MARKET", "BAZAAR", "SHOP", "STORE", "INN",
+          "TAVERN", "PUB", "BAR", "HOTEL", "MOTEL", "LODGE", "HOSTEL", "TEMPLE", "CHURCH", "CHAPEL",
+          "CATHEDRAL", "MONASTERY", "ABBEY", "CONVENT", "SHRINE", "ALTAR", "SANCTUARY", "LIBRARY",
+          "SCHOOL", "ACADEMY", "COLLEGE", "UNIVERSITY", "MUSEUM", "THEATER", "ARENA", "STADIUM",
+          "COLOSSEUM", "CIRCUS", "CARNIVAL", "FAIR", "FESTIVAL", "PARADE", "PROCESSION", "CEREMONY",
+          "RITUAL", "SPELL", "CHANT", "PRAYER", "CURSE", "HEX", "JINX", "CHARM", "ENCHANT",
+          "ILLUSION", "VISION", "DREAM", "NIGHTMARE", "TRANCE", "HYPNOSIS", "MIND", "SOUL", "SPIRIT",
+          "ABOUT", "ABOVE", "ACTOR", "ADAPT", "ADMIT", "ADOBE", "ADOPT", "ADULT", "AFTER", "AGAIN",
+          "AGENT", "AGILE", "AGREE", "AHEAD", "ALARM", "ALBUM", "ALERT", "ALIEN", "ALIKE", "ALIVE",
+          "ALLOW", "ALONE", "ALONG", "ALPHA", "ALTER", "AMAZED", "AMBER", "AMONG", "AMPLE", "ANGRY",
+          "ANKLE", "ANNOY", "APPLY", "APRIL", "APRON", "ARGUE", "ARISE", "ARMED", "ARRAY", "ASIDE",
+          "ASSET", "AUDIO", "AUDIT", "AVOID", "AWAKE", "AWARD", "AWARE", "AWFUL", "BADGE", "BAKER",
+          "BALLAD", "BANJO", "BARGE", "BASIC", "BATCH", "BATH", "BATON", "BEACH", "BEAM", "BEAN",
+          "BEAR", "BEAT", "BEGIN", "BEING", "BELOW", "BELT", "BENCH", "BEND", "BERRY", "BEST",
+          "BETA", "BIAS", "BIBLE", "BILL", "BIND", "BINGO", "BIOME", "BIRD", "BIRTH", "BITE",
+          "BLACK", "BLAME", "BLAND", "BLANK", "BLAST", "BLEED", "BLEND", "BLESS", "BLIND", "BLINK",
+          "BLISS", "BLOCK", "BLOG", "BLOND", "BLUE", "BLUR", "BLUSH", "BOARD", "BOAT", "BODY",
+          "BOIL", "BOLD", "BOLT", "BOMB", "BOND", "BONE", "BONUS", "BOOST", "BOOT", "BORE",
+          "BORN", "BOSS", "BOTH", "BOWL", "BOXER", "BRAIN", "BRAKE", "BRAND", "BRASS", "BRAVE",
+          "BREAD", "BREAK", "BREED", "BRIEF", "BRIGHT", "BRING", "BRISK", "BROAD", "BROKE", "BROWN",
+          "BRUSH", "BUCK", "BUILD", "BULB", "BULL", "BUNCH", "BURN", "BURY", "BUSH", "BUSY",
+          "BYTE", "CABLE", "CAGE", "CAKE", "CALL", "CALM", "CAMEL", "CAMP", "CANAL", "CANDY",
+          "CANE", "CARD", "CARE", "CARRY", "CART", "CASE", "CASH", "CAST", "CATCH", "CAUSE",
+          "CELL", "CENT", "CHAIN", "CHAIR", "CHALK", "CHAMP", "CHANT", "CHART", "CHASE", "CHEAP",
+          "CHEAT", "CHECK", "CHEEK", "CHEER", "CHESS", "CHICK", "CHILD", "CHILL", "CHIP", "CHOIR",
+          "CHOSE", "CIDER", "CIGAR", "CIVIL", "CLAIM", "CLAMP", "CLAN", "CLAP", "CLASS", "CLAY",
+          "CLEAN", "CLEAR", "CLERK", "CLICK", "CLIFF", "CLIMB", "CLIP", "CLOCK", "CLOSE", "CLOTH",
+          "CLUB", "CLUE", "COACH", "COAL", "COAST", "COAT", "CODE", "COIN", "COLD", "COLOR",
+          "COMET", "COMIC", "COOK", "COOL", "COPY", "CORD", "CORK", "CORN", "COST", "COTTON",
+          "COUCH", "COUNT", "COURT", "COVER", "COWBOY", "CRAFT", "CRANE", "CRASH", "CRATE", "CRAWL",
+          "CRAZY", "CREAM", "CREEK", "CREW", "CRIB", "CRISP", "CROP", "CROSS", "CROW", "CROWD",
+          "CRUDE", "CRUEL", "CRUST", "CUBE", "CUBIC", "CURVE", "CUTE", "CYCLE", "DAILY", "DAIRY",
+          "DAISY", "DAMP", "DANCE", "DARE", "DARK", "DART", "DASH", "DATE", "DEAL", "DEAR",
+          "DEBT", "DECK", "DEEP", "DEER", "DELAY", "DELT", "DEMON", "DENIM", "DENSE", "DENT",
+          "DEPOT", "DEPTH", "DESK", "DIAL", "DIARY", "DICE", "DIET", "DIGIT", "DINE", "DINER",
+          "DIRT", "DIRTY", "DISC", "DISH", "DISK", "DIVE", "DOCK", "DOCTOR", "DODGE", "DOLL",
+          "DOLLAR", "DONOR", "DOOR", "DOSE", "DOTS", "DOUBLE", "DOUBT", "DOUGH", "DOVE", "DOWN",
+          "DOZEN", "DRAFT", "DRAG", "DRAIN", "DRAMA", "DRAW", "DREAM", "DRESS", "DRIED", "DRIFT",
+          "DRILL", "DRINK", "DRIVE", "DROP", "DROVE", "DRUM", "DRY", "DUCK", "DUCT", "DUE",
+          "DUET", "DUKE", "DULL", "DUMB", "DUMP", "DUNE", "DUST", "DUTY", "DYING", "EAGER",
+          "EARLY", "EARN", "EASE", "EAST", "EASY", "EATEN", "ECHO", "EDGE", "EDIT", "EIGHT",
+          "EJECT", "ELBOW", "ELDER", "ELECT", "ELEVEN", "ELITE", "EMPTY", "ENACT", "ENDING", "ENEMY",
+          "ENJOY", "ENTER", "ENTRY", "EQUAL", "EQUIP", "ERASE", "ERROR", "ERUPT", "ESSAY", "ETHER",
+          "ETHIC", "EVADE", "EVEN", "EVENT", "EVER", "EVERY", "EVICT", "EVIL", "EXACT", "EXAM",
+          "EXIST", "EXIT", "EXPAT", "EXTRA", "EYE", "FACE", "FACT", "FADE", "FAIL", "FAINT",
+          "FAIR", "FAKE", "FALL", "FAME", "FANCY", "FARM", "FAST", "FATAL", "FATE", "FAULT",
+          "FAVOR", "FEAR", "FEAST", "FEATHER", "FEED", "FEEL", "FEET", "FELL", "FELT", "FENCE",
+          "FEVER", "FEW", "FIBER", "FIELD", "FIFTY", "FILE", "FILL", "FILM", "FILTER", "FINAL",
+          "FIND", "FINE", "FINGER", "FINISH", "FIRE", "FIRM", "FIRST", "FISH", "FIST", "FIT",
+          "FIVE", "FIXED", "FLAG", "FLAME", "FLANK", "FLASH", "FLAT", "FLAW", "FLEA", "FLEET",
+          "FLESH", "FLIGHT", "FLINT", "FLOAT", "FLOCK", "FLOOD", "FLOOR", "FLOUR", "FLOW", "FLOWER",
+          "FLUID", "FLUSH", "FLUTE", "FLY", "FOAM", "FOCAL", "FOCUS", "FOG", "FOIL", "FOLD",
+          "FOLK", "FOLLOW", "FOOD", "FOOL", "FOOT", "FORCE", "FORD", "FOREST", "FORK", "FORM",
+          "FORTY", "FORUM", "FOUND", "FOUR", "FOWL", "FOX", "FRAME", "FRANK", "FRAUD", "FREE",
+          "FRESH", "FRIEND", "FROG", "FROM", "FRONT", "FROST", "FROZE", "FRUIT", "FUEL", "FULL",
+          "FUME", "FUND", "FUNNY", "FUR", "FURNACE", "FURY", "FUSE", "FUTURE", "GAIN", "GALAXY",
+          "GALLON", "GAME", "GANG", "GAP", "GARAGE", "GARDEN", "GARLIC", "GAS", "GATE", "GATHER",
+          "GAUGE", "GAZE", "GEAR", "GENDER", "GENE", "GENIE", "GENIUS", "GENTLE", "GEOLOGY", "GERM",
+          "GET", "GHOST", "GIANT", "GIFT", "GIGGLE", "GINGER", "GIRL", "GIVE", "GLAD", "GLANCE",
+          "GLARE", "GLASS", "GLAZE", "GLEAM", "GLIDE", "GLOBAL", "GLOBE", "GLOOM", "GLORY", "GLOVE",
+          "GLOW", "GLUE", "GOAL", "GOAT", "GOLD", "GOLF", "GONE", "GOOD", "GOOSE", "GORGE", "GOSPEL",
+          "GOSSIP", "GOVERN", "GOWN", "GRAB", "GRACE", "GRADE", "GRAIN", "GRAM", "GRAND", "GRANT",
+          "GRAPE", "GRAPH", "GRASP", "GRASS", "GRATE", "GRAVE", "GRAVITY", "GRAY", "GREAT", "GREED",
+          "GREEN", "GREET", "GRID", "GRIEF", "GRILL", "GRIM", "GRIN", "GRIND", "GRIP", "GROAN",
+          "GROOM", "GROOVE", "GROUND", "GROUP", "GROW", "GROWL", "GROWN", "GUARD", "GUESS", "GUEST",
+          "GUIDE", "GUILD", "GUILT", "GUITAR", "GULF", "GUM", "GUN", "GURU", "GUSH", "GUT",
+          "GUY", "HABIT", "HACK", "HAIL", "HAIR", "HALF", "HALL", "HALO", "HALT", "HAMMER",
+          "HAND", "HANDLE", "HANG", "HAPPEN", "HAPPY", "HARBOR", "HARD", "HARDY", "HARM", "HARP",
+          "HARSH", "HARVEST", "HAS", "HASH", "HASTE", "HAT", "HATCH", "HATE", "HAUL", "HAUNT",
+          "HAVE", "HAVEN", "HAWK", "HAZARD", "HAZE", "HAZEL", "HEAD", "HEAL", "HEALTH", "HEAP",
+          "HEAR", "HEART", "HEAT", "HEAVE", "HEAVY", "HEAVY", "HEDGE", "HEEL", "HEIGHT", "HEIR", "HELIX",
+          "HELLO", "HELM", "HELP", "HEMP", "HEN", "HERB", "HERD", "HERE", "HERO", "HERTZ",
+          "HEW", "HIDDEN", "HIDE", "HIGH", "HIKE", "HILL", "HILT", "HIND", "HINGE", "HINT",
+          "HIP", "HIRE", "HISS", "HISTORY", "HIT", "HIVE", "HOARD", "HOBBY", "HOCKEY", "HOLD",
+          "HOLE", "HOLLOW", "HOLLY", "HOME", "HONEST", "HONEY", "HOOD", "HOOK", "HOPE", "HORN",
+          "HORROR", "HORSE", "HOSE", "HOST", "HOT", "HOTEL", "HOUR", "HOUSE", "HOVER", "HOWL",
+          "HUB", "HUG", "HUGE", "HULL", "HUM", "HUMAN", "HUMID", "HUMOR", "HUMP", "HUNGER",
+          "HUNT", "HURDLE", "HURL", "HURRY", "HURT", "HUSH", "HUT", "HYBRID", "HYDRANT", "HYDRO",
+          "HYPER", "ICING", "ICON", "IDEA", "IDEAL", "IDIOM", "IDIOT", "IDLE", "IDOL", "IGNITE",
+          "IGNORE", "ILL", "IMAGE", "IMBUE", "IMMUNE", "IMPACT", "IMPLY", "IMPORT", "IMPOSE", "IMPRESS",
+          "IMPULSE", "INCH", "INCITE", "INCOME", "INCUR", "INDEX", "INDOOR", "INDUCE", "INEPT", "INERT",
+          "INFANT", "INFECT", "INFER", "INFIRM", "INFLATE", "INFO", "INGOT", "INK", "INLAND", "INLET",
+          "INNER", "INPUT", "INANE", "INSECT", "INSERT", "INSIDE", "INSIST", "INSPECT", "INSTALL", "INSTANT",
+          "INTACT", "INTAKE", "INTENT", "INTER", "INTO", "INTRUDE", "INVADE", "INVENT", "INVEST", "INVITE",
+          "INVOICE", "INVOKE", "IRON", "IRONY", "ISLAND", "ISLET", "ISOLATE", "ISSUE", "ITEM", "ITCH",
+          "IVORY", "JACK", "JACKAL", "JACKET", "JADE", "JAIL", "JAM", "JANITOR", "JAR", "JAZZ",
+          "JEALOUS", "JEANS", "JELLY", "JET", "JEWEL", "JIGSAW", "JINGLE", "JOB", "JOCKEY", "JOG",
+          "JOIN", "JOINT", "JOKE", "JOLLY", "JOLT", "JOURNAL", "JOURNEY", "JOY", "JUDGE", "JUDO",
+          "JUICE", "JUMP", "JUNGLE", "JUNIOR", "JUNK", "JURY", "JUST", "KANGAROO", "KARATE", "KEEL",
+          "KEEN", "KEEP", "KELP", "KENNEL", "KEPT", "KERNEL", "KETTLE", "KEY", "KHAKI", "KICK",
+          "KID", "KIDNAP", "KIDNEY", "KILL", "KILN", "KILO", "KILT", "KIN", "KIND", "KING",
+          "KINGDOM", "KIOSK", "KISS", "KIT", "KITCHEN", "KITE", "KITTEN", "KNACK", "KNEAD", "KNEE",
+          "KNEEL", "KNIFE", "KNIGHT", "KNIT", "KNOB", "KNOCK", "KNOT", "KNOW", "KOALA", "KRILL",
+          "LABEL", "LABOR", "LACE", "LACK", "LADDER", "LADLE", "LADY", "LAG", "LAKE", "LAMB",
+          "LAME", "LAMP", "LANCE", "LAND", "LANE", "LANGUAGE", "LANTERN", "LAP", "LAPTOP", "LARGE",
+          "LARK", "LASER", "LASH", "LASSO", "LAST", "LATCH", "LATE", "LATER", "LATHE", "LATIN",
+          "LAUGH", "LAUNCH", "LAVA", "LAW", "LAWN", "LAWYER", "LAY", "LAYER", "LAZY", "LEAD",
+          "LEADER", "LEAF", "LEAGUE", "LEAK", "LEAN", "LEAP", "LEARN", "LEASE", "LEASH", "LEAST",
+          "LEAVE", "LECTURE", "LEDGE", "LEECH", "LEFT", "LEG", "LEGACY", "LEGAL", "LEGEND", "LEMON",
+          "LEND", "LENGTH", "LENS", "LENTIL", "LEOPARD", "LESS", "LESSON", "LET", "LETTER", "LEVEL",
+          "LEVER", "LIAR", "LIBERTY", "LIBRARY", "LICENSE", "LICK", "LID", "LIE", "LIFE", "LIFT",
+          "LIGHT", "LIKE", "LILAC", "LILY", "LIMB", "LIME", "LIMIT", "LIMP", "LINE", "LINEN", "LINER",
+          "LINGER", "LINK", "LION", "LIP", "LIQUID", "LIST", "LISTEN", "LIT", "LITER", "LITTER", "LITTLE",
+          "LIVE", "LIVELY", "LIVER", "LIZARD", "LOAD", "LOAF", "LOAN", "LOBBY", "LOBSTER", "LOCAL",
+          "LOCK", "LOCKER", "LOCUST", "LODGE", "LOFT", "LOG", "LOGIC", "LOGO", "LONELY", "LONG",
+          "LOOK", "LOOM", "LOOP", "LOOSE", "LOOT", "LORD", "LORRY", "LOSE", "LOSS", "LOST",
+          "LOT", "LOTION", "LOTTERY", "LOUD", "LOUNGE", "LOVE", "LOVELY", "LOVER", "LOW", "LOWER",
+          "LOYAL", "LUCK", "LUCKY", "LUGGAGE", "LUMBER", "LUMP", "LUNAR", "LUNCH", "LUNG", "LURE",
+          "LUSH", "LUSTER", "LUTE", "LUXURY", "LYING", "LYMPH", "LYRIC"
         ];
 
-        // 2. Extra Allowed Guesses (Preserved)
-        const extras = [
-             "AAHED", "ABACA", "ABACI", "ABACK", "ABAFT", "ABBAS", "ABBES", "ABEYS",
-            "ABIDE", "ABLED", "ABLER", "ABOOD", "ABORT", "ABOSM", "ABOUT", "ABOVE",
-            "ABUSE", "ABUTS", "ABUZZ", "ABYES", "ACERB", "ACIDS", "ACORN", "ACRED",
-            "ACRES", "ACRID", "ACTED", "ACTIN", "ACTOR", "ACUTE", "ADAGE", "ADAPT",
-            "ADDED", "ADDER", "ADDLE", "ADEPT", "ADIEU", "ADIOS", "ADMIT", "ADMIX",
-            "ADOBE", "ADOPT", "ADORE", "ADORN", "ADULT", "AEGIS", "AERIE", "AFFIX",
-            "AFIRE", "AFOOT", "AFOUL", "AFTER", "AGAIN", "AGAPE", "AGATE", "AGENT",
-            "AGILE", "AGING", "AGLOW", "AGONY", "AGORA", "AGREE", "AHEAD", "AIDED",
-            "AIDES", "AILEY", "AILOS", "AIMED", "AIMER", "AIRED", "AISLE", "ALACK",
-            "ALARM", "ALBUM", "ALDER", "ALERT", "ALGAE", "ALIAS", "ALIBI", "ALIEN",
-            "ALIGN", "ALIKE", "ALIVE", "ALKYL", "ALLAY", "ALLEY", "ALLOT", "ALLOW",
-            "ALLOY", "ALOFT", "ALONE", "ALONG", "ALOOF", "ALOUD", "ALPHA", "ALTAR",
-            "ALTER", "AMASS", "AMAZE", "AMBER", "AMBIT", "AMBLE", "AMEND", "AMIDS",
-            "AMISS", "AMITY", "AMONG", "AMORT", "AMPLE", "AMPLY", "AMUSE", "ANGEL",
-            "ANGER", "ANGLE", "ANGRY", "ANGST", "ANIME", "ANKLE", "ANNEX", "ANNOY",
-            "ANNUL", "ANODE", "ANTIC", "ANVIL", "AORTA", "APACE", "APART", "APHID",
-            "APING", "APNEA", "APPLE", "APPLY", "APRON", "APSES", "APTLY", "ARBOR",
-            "ARDOR", "AREAL", "AREAS", "ARENA", "ARGON", "ARGUE", "ARIAS", "ARISE",
-            "ARMED", "ARMOR", "AROMA", "AROSE", "ARRAY", "ARROW", "ARSON", "ASCOT",
-            "ASHEN", "ASIDE", "ASKED", "ASKEW", "ASPEN", "ASSAY", "ASSET", "ATOLL",
-            "ATOMS", "ATONE", "ATTIC", "AUDIO", "AUDIT", "AUNTS", "AURAL", "AVAIL",
-            "AVERS", "AVERT", "AVOID", "AVOWS", "AWAIT", "AWAKE", "AWARD", "AWARE",
-            "AWASH", "AWFUL", "AWOKE", "AXIAL", "AXIOM", "AXLES", "AZURE", "BACON",
-            "BADGE", "BADLY", "BAGEL", "BAGGY", "BAKED", "BAKER", "BALER", "BALES",
-            "BALLS", "BALMY", "BALSA", "BANAL", "BANDS", "BANDY", "BANGS", "BANJO",
-            "BANKS", "BARBS", "BARDS", "BARED", "BARGE", "BARKS", "BARNS", "BARON",
-            "BASAL", "BASED", "BASES", "BASIC", "BASIL", "BASIN", "BASIS", "BASTE",
-            "BATCH", "BATED", "BATES", "BATHE", "BATHS", "BATON", "BATTY", "BAWDY",
-            "BAYOU", "BEACH", "BEADS", "BEADY", "BEAKS", "BEAMS", "BEANS", "BEARD",
-            "BEARS", "BEAST", "BEATS", "BEAUS", "BEAUT", "BEAUX", "BEDOP", "BEECH",
-            "BEEFS", "BEEFY", "BEEPS", "BEERS", "BEETS", "BEFIT", "BEFOG", "BEGAN",
-            "BEGAT", "BEGET", "BEGIN", "BEGOT", "BEGUN", "BEIGE", "BEING", "BELAY",
-            "BELCH", "BELIE", "BELLE", "BELLS", "BELLY", "BELOW", "BELTS", "BENCH",
-            "BENDS", "BERET", "BERRY", "BERTH", "BERYL", "BESET", "BESTS", "BETAS",
-            "BETEL", "BETTA", "BEVEL", "BEZEL", "BIBLE", "BICEP", "BIDDY", "BIDES",
-            "BIDET", "BIGOT", "BIJOU", "BIKER", "BIKES", "BILES", "BILGE", "BILLS",
-            "BILLY", "BIMBO", "BINDS", "BINGE", "BINGO", "BIOME", "BIOTA", "BIPED",
-            "BIRCH", "BIRDS", "BIRTH", "BISON", "BITCH", "BITER", "BITES", "BITS",
-            "BITTY", "BLACK", "BLADE", "BLAME", "BLAND", "BLANK", "BLARE", "BLASE",
-            "BLAST", "BLAZE", "BLEAK", "BLEAT", "BLEED", "BLEEP", "BLEND", "BLESS",
-            "BLIMP", "BLIND", "BLINK", "BLIPS", "BLISS", "BLITZ", "BLOAT", "BLOBS",
-            "BLOCK", "BLOCS", "BLOGS", "BLOND", "BLOOD", "BLOOM", "BLOTS", "BLOWN",
-            "BLOWS", "BLUER", "BLUES", "BLUFF", "BLUNT", "BLURT", "BLUSH", "BOARD",
-            "BOARS", "BOAST", "BOATS", "BOBBY", "BODED", "BODES", "BOGGY", "BOGUS",
-            "BOILS", "BOLTS", "BOMBS", "BONDS", "BONED", "BONES", "BONEY", "BONGO",
-            "BONUS", "BOOBY", "BOOKS", "BOOMS", "BOONS", "BOOR", "BOOST", "BOOTH",
-            "BOOTS", "BOOTY", "BOOZE", "BORAX", "BORED", "BORES", "BORNE", "BOSOM",
-            "BOSS", "BOTCH", "BOUGH", "BOULE", "BOUND", "BOWED", "BOWEL", "BOWER",
-            "BOXED", "BOXER", "BOXES", "BRACE", "BRAGS", "BRAID", "BRAIN", "BRAKE",
-            "BRAND", "BRASH", "BRASS", "BRATS", "BRAVE", "BRAVO", "BRAWL", "BRAWN",
-            "BREAD", "BREAK", "BREED", "BRIAR", "BRIBE", "BRICK", "BRIDE", "BRIEF",
-            "BRIER", "BRIGS", "BRIM", "BRINE", "BRING", "BRINK", "BRISK", "BROAD",
-            "BROIL", "BROKE", "BROOD", "BROOK", "BROOM", "BROTH", "BROWN", "BROWS",
-            "BRUIN", "BRUNT", "BRUSH", "BRUTE", "BUCKS", "BUDDY", "BUDGE", "BUFFS",
-            "BUGGY", "BUGLE", "BUILD", "BUILT", "BULBS", "BULGE", "BULKS", "BULKY",
-            "BULLS", "BULLY", "BUMPS", "BUMPY", "BUNCH", "BUNKS", "BUNNY", "BUOYS",
-            "BURGS", "BURLY", "BURNS", "BURNT", "BURPS", "BURRO", "BURST", "BUSES",
-            "BUSHY", "BUSTS", "BUSTY", "BUTCH", "BUTTE", "BUTTS", "BUXOM", "BUYER",
-            "BUZZY", "BYLAW", "BYRES", "BYTES", "BYWAY", "CABAL", "CABBY", "CABIN",
-            "CABLE", "CACAO", "CACHE", "CACTI", "CADDY", "CADET", "CADRE", "CAFES",
-            "CAGED", "CAGES", "CAGEY", "CAIRN", "CAKED", "CAKES", "CALKS", "CALLS",
-            "CALMS", "CALVE", "CAMEL", "CAMEO", "CAMPS", "CANAL", "CANDY", "CANES",
-            "CANNY", "CANOE", "CANON", "CANTO", "CAPED", "CAPER", "CAPES", "CAPON",
-            "CAPUT", "CARAT", "CARDS", "CARED", "CARES", "CARGO", "CAROL", "CARRY",
-            "CARTS", "CARVE", "CASED", "CASES", "CASKS", "CASTE", "CASTS", "CATCH",
-            "CATER", "CATTY", "CAULK", "CAUSE", "CAVED", "CAVER", "CAVES", "CEASE",
-            "CEDAR", "CEDED", "CEDES", "CELLO", "CELLS", "CENTS", "CERAM", "CHAFE",
-            "CHAFF", "CHAIN", "CHAIR", "CHALK", "CHAMP", "CHANT", "CHAOS", "CHAPS",
-            "CHARD", "CHARM", "CHART", "CHASE", "CHASM", "CHAT", "CHEAP", "CHEAT",
-            "CHECK", "CHEEK", "CHEEP", "CHEER", "CHEFS", "CHESS", "CHEST", "CHEW",
-            "CHIC", "CHICK", "CHIDE", "CHIEF", "CHILD", "CHILI", "CHILL", "CHIME",
-            "CHIMP", "CHINA", "CHINK", "CHINO", "CHINS", "CHIPS", "CHIRP", "CHIVE",
-            "CHOCK", "CHOIR", "CHOKE", "CHOPS", "CHORD", "CHORE", "CHOSE", "CHOW",
-            "CHUB", "CHUCK", "CHUMP", "CHUNK", "CHURN", "CHUTE", "CIDER", "CIGAR",
-            "CINCH", "CIRCA", "CITES", "CIVIC", "CIVIL", "CLACK", "CLAIM", "CLAMP",
-            "CLAMS", "CLANG", "CLANK", "CLANS", "CLAP", "CLASH", "CLASP", "CLASS",
-            "CLAW", "CLAY", "CLEAN", "CLEAR", "CLEAT", "CLEFS", "CLEFT", "CLERK",
-            "CLICK", "CLIFF", "CLIMB", "CLING", "CLINK", "CLIPS", "CLOAK", "CLOCK",
-            "CLODS", "CLOGS", "CLOMP", "CLONE", "CLOSE", "CLOTH", "CLOTS", "CLOUD",
-            "CLOUT", "CLOVE", "CLOWN", "CLUBS", "CLUCK", "CLUE", "CLUMP", "CLUNG",
-            "COACH", "COAL", "COAST", "COAT", "COBRA", "COCK", "COCOA", "CODES",
-            "COIL", "COIN", "COKE", "COLA", "COLD", "COLE", "COLL", "COLT", "COMA",
-            "COMB", "COME", "CONE", "COOK", "COOL", "COOP", "COOT", "COPE", "COPY",
-            "CORD", "CORE", "CORK", "CORN", "COST", "COSY", "COTS", "COUCH", "COUGH",
-            "COUNT", "COUP", "COURT", "COVE", "COW", "CRAB", "CRACK", "CRAFT", "CRAM",
-            "CRANE", "CRANK", "CRASH", "CRATE", "CRAWL", "CRAZE", "CRAZY", "CREAK",
-            "CREAM", "CREDO", "CREED", "CREEK", "CREEP", "CREPE", "CREPT", "CRESS",
-            "CREST", "CREW", "CRIB", "CRICKET", "CRIED", "CRIES", "CRIME", "CRIMP",
-            "CRISP", "CROAK", "CROCK", "CRONE", "CROOK", "CROON", "CROP", "CROSS",
-            "CROWD", "CROWN", "CRUDE", "CRUEL", "CRUMB", "CRUSH", "CRUST", "CRYPT",
-            "CUBE", "CUBIC", "CUFF", "CULL", "CULT", "CUPID", "CURB", "CURE", "CURIO",
-            "CURL", "CURRY", "CURSE", "CURVE", "CURVY", "CUTIE", "CYCLE", "CYNIC",
-            "DADDY", "DAFFY", "DAILY", "DAIRY", "DAISY", "DALLY", "DAME", "DAMP",
-            "DANCE", "DANDY", "DARE", "DARK", "DART", "DASH", "DATA", "DATE", "DAUNT",
-            "DAWN", "DAY", "DAZE", "DEAD", "DEAF", "DEAL", "DEALT", "DEAN", "DEAR",
-            "DEATH", "DEBIT", "DEBT", "DEBUG", "DEBUT", "DECAL", "DECAY", "DECK",
-            "DECOR", "DECOY", "DEED", "DEEM", "DEEP", "DEER", "DEFEAT", "DEFECT",
-            "DEFER", "FLEET", "FLESH", "FLICK", "FLIER", "FLIGHT", "FLING", "FLINT",
-            "FLIP", "FLIRT", "FLOAT", "FLOCK", "FLOOD", "FLOOR", "FLORA", "FLOSS",
-            "FLOUR", "FLOW", "FLOWER", "FLU", "FLUFF", "FLUID", "FLUKE", "FLUME",
-            "FLUNG", "FLUNK", "FLUSH", "FLUTE", "FLY", "FOAM", "FOCAL", "FOCUS",
-            "FOG", "FOIL", "FOLD", "FOLK", "FOND", "FONT", "FOOD", "FOOL", "FOOT",
-            "FORAY", "FORCE", "FORD", "FORE", "FORGE", "FORGO", "FORK", "FORM",
-            "FORT", "FORTH", "FORTY", "FORUM", "FOUL", "FOUND", "FOUNT", "FOUR",
-            "FOWL", "FOX", "FOXY", "FOYER", "FRAIL", "FRAME", "FRANK", "FRAUD",
-            "FRAY", "FREAK", "FREE", "FREED", "FREER", "FREES", "FREEZE", "FRESH",
-            "FRET", "FRIAR", "FRIED", "FRIER", "FRIES", "FRILL", "FRISK", "FRITZ",
-            "FROCK", "FROG", "FROM", "FROND", "FRONT", "FROST", "FROTH", "FROWN",
-            "FROZE", "FRUIT", "FRY", "FUDGE", "FUEL", "FUGUE", "FULL", "FULLY",
-            "FUME", "FUN", "FUND", "FUNGI", "FUNKY", "FUNNY", "FUR", "FUROR", "FURY",
-            "FUSE", "FUSS", "FUSSY", "FUTURE", "FUZZ", "FUZZY", "GAB", "GADGET",
-            "GAFFE", "GAG", "GAGE", "GAIN", "GAIT", "GALA", "GALAXY", "GALE", "GALL",
-            "GALLEY", "GALLOP", "GAME", "GAMMA", "GAMUT", "GANG", "GAP", "GAPE",
-            "GARAGE", "GARB", "GARDEN", "GARLIC", "GAS", "GASH", "GASP", "GATE",
-            "GATHER", "GAUDY", "GAUGE", "GAUNT", "GAUZE", "GAVE", "GAWK", "GAZE",
-            "GEAR", "GECKO", "GEEK", "GEL", "GEM", "GENE", "GENIE", "GENRE", "GENT",
-            "GENTS", "GENUS", "GEODE", "GERM", "GET", "GHOST", "GIANT", "GIFT",
-            "GIG", "GILD", "GILL", "GILT", "GINGER", "GIRL", "GIRTH", "GIST", "GIVE",
-            "GIVEN", "GIVER", "GLAD", "GLADE", "GLAND", "GLARE", "GLASS", "GLAZE",
-            "GLEAM", "GLEAN", "GLEE", "GLEN", "GLIDE", "GLINT", "GLOAT", "GLOB",
-            "GLOBAL", "GLOBE", "GLOOM", "GLORY", "GLOSS", "GLOVE", "GLOW", "GLUE",
-            "GLUM", "GLUT", "GNASH", "GNAT", "GNAW", "GOAL", "GOAT", "GOB", "GOD",
-            "GOING", "GOLD", "GOLF", "GONE", "GONER", "GONG", "GOOD", "GOOF", "GOOFY",
-            "GOOSE", "GORE", "GORGE", "GOSH", "GOT", "GOUGE", "GOURD", "GOWN", "GRAB",
-            "GRACE", "GRADE", "GRAFT", "GRAIL", "GRAIN", "GRAM", "GRAND", "GRANT",
-            "GRAPE", "GRAPH", "GRASP", "GRASS", "GRATE", "GRAVE", "GRAVY", "GRAY",
-            "GRAZE", "GREAT", "GREED", "GREEN", "GREET", "GRID", "GRIEF", "GRILL",
-            "GRIM", "GRIME", "GRIN", "GRIND", "GRIP", "GRIPE", "GRIT", "GROAN",
-            "GROIN", "GROOM", "GROPE", "GROSS", "GROUP", "GROUT", "GROVE", "GROW",
-            "GROWN", "GROWL", "GRUB", "GRUEL", "GRUFF", "GRUNT", "GUARD", "GUAVA",
-            "GUESS", "GUEST", "GUIDE", "GUILD", "GUILE", "GUILT", "GUISE", "GULCH",
-            "GULF", "GULL", "GULLY", "GULP", "GUM", "GUMMY", "GUN", "GUPPY", "GUST",
-            "GUSTO", "GUT", "GUY", "GYM", "GYPSY", "GYRO", "HABIT", "HACK", "HAIL",
-            "HAIR", "HAIRY", "HALF", "HALL", "HALO", "HALT", "HALVE", "HAM", "HAND",
-            "HANDY", "HANG", "HANK", "HAPPY", "HARD", "HARDY", "HARE", "HARK", "HARM",
-            "HARP", "HARSH", "HART", "HAS", "HASH", "HASP", "HASTE", "HASTY", "HAT",
-            "HATCH", "HATE", "HAUL", "HAUNT", "HAVE", "HAVEN", "HAVOC", "HAWK",
-            "HAZARD", "HAZE", "HAZEL", "HAZY", "HEAD", "HEAL", "HEAP", "HEAR", "HEARD",
-            "HEART", "HEAT", "HEAVE", "HEAVY", "HEDGE", "HEED", "HEEL", "HEFT",
-            "HEFTY", "HEIR", "HEIST", "HELIX", "HELLO", "HELM", "HELP", "HEMP", "HEN",
-            "HENCE", "HER", "HERB", "HERD", "HERE", "HERO", "HERTZ", "HEW", "HEX",
-            "HEY", "HIATUS", "HICK", "HID", "HIDE", "HIGH", "HIKE", "HILL", "HILT",
-            "HIND", "HINGE", "HINT", "HIP", "HIRE", "HISS", "HIT", "HITCH", "HIVE",
-            "HOARD", "HOBBY", "HOCK", "HOE", "HOG", "HOIST", "HOLD", "HOLE", "HOLIDAY",
-            "HOLLOW", "HOLLY", "HOLY", "HOME", "HOMER", "HONE", "HONEST", "HONEY",
-            "HONK", "HOOD", "HOOF", "HOOK", "HOOP", "HOOT", "HOP", "HOPE", "HORDE",
-            "HORN", "HORNY", "HORSE", "HOSE", "HOST", "HOT", "HOTEL", "HOUND", "HOUR",
-            "HOUSE", "HOVER", "HOW", "HOWL", "HUB", "HUE", "HUFF", "HUG", "HUGE",
-            "HULA", "HULK", "HULL", "HUM", "HUMAN", "HUMID", "HUMOR", "HUMP", "HUNCH",
-            "HUNG", "HUNK", "HUNT", "HURL", "HURRY", "HURT", "HUSH", "HUSK", "HUSKY",
-            "HUT", "HYDRA", "HYENA", "HYMN", "HYPE", "HYPER", "ICING", "ICON", "ICY",
-            "IDEA", "IDEAL", "IDIOM", "IDIOT", "IDLE", "IDOL", "IGLOO", "IGNITE",
-            "IGNORE", "ILL", "IMAGE", "IMBUE", "IMP", "IMPEL", "IMPLY", "INANE",
-            "INBOX", "INCH", "INCUR", "INDEX", "INEPT", "INERT", "INFER", "INGOT",
-            "INK", "INLAY", "INLET", "INNER", "INPUT", "INSERT", "INSET", "INTEL",
-            "INTER", "INTO", "INTRO", "ION", "IRATE", "IRE", "IRIS", "IRON", "IRONY",
-            "ISLE", "ISLET", "ISSUE", "ITCH", "ITEM", "IVORY", "IVY", "JAB", "JACK",
-            "JADED", "JAIL", "JAM", "JANITOR", "JAR", "JAZZ", "JAZZY", "JEANS",
-            "JEEP", "JEER", "JELLY", "JERK", "JERKY", "JEST", "JET", "JEWEL", "JIB",
-            "JIG", "JILT", "JINX", "JIVE", "JOB", "JOCK", "JOG", "JOIN", "JOINT",
-            "JOKE", "JOLLY", "JOLT", "JOURNAL", "JOY", "JUDGE", "JUDO", "JUG", "JUICE",
-            "JUICY", "JULY", "JUMBO", "JUMP", "JUMPY", "JUNE", "JUNGLE", "JUNIOR",
-            "JUNK", "JUNTA", "JURY", "JUST", "JUTE", "KALE", "KARAT", "KARMA", "KAYAK",
-            "KEBAB", "KEEL", "KEEN", "KEEP", "KEG", "KELP", "KENNEL", "KEPT", "KERNEL",
-            "KETCH", "KEY", "KHAKI", "KICK", "KID", "KIDNEY", "KILL", "KILN", "KILO",
-            "KILT", "KIN", "KIND", "KING", "KINK", "KIOSK", "KISS", "KIT", "KITE",
-            "KITH", "KITTEN", "KITTY", "KIWI", "KNEAD", "KNEE", "KNEEL", "KNELT",
-            "KNIFE", "KNIGHT", "KNIT", "KNOB", "KNOCK", "KNOT", "KNOW", "KNOWN",
-            "KOALA", "KRILL", "LABEL", "LABOR", "LACE", "LACK", "LAD", "LADDER",
-            "LADLE", "LADY", "LAG", "LAGER", "LAID", "LAIR", "LAKE", "LAMB", "LAME",
-            "LAMP", "LANCE", "LAND", "LANE", "LANG", "LANKY", "LAP", "LAPEL", "LAPSE",
-            "LARD", "LARGE", "LARK", "LARVA", "LASH", "LASSO", "LAST", "LATCH",
-            "LATE", "LATER", "LATHE", "LATTE", "LAUGH", "LAUNCH", "LAVA", "LAW",
-            "LAWN", "LAYER", "LAYMAN", "LAZY", "LEA", "LEACH", "LEAD", "LEAF", "LEAFY",
-            "LEAK", "LEAKY", "LEAN", "LEAP", "LEARN", "LEASE", "LEASH", "LEAST",
-            "LEAVE", "LED", "LEDGE", "LEECH", "LEEK", "LEER", "LEFT", "LEFTY",
-            "LEGAL", "LEGEND", "LEGGY", "LEMON", "LEND", "LENGTH", "LENS", "LENT",
-            "LEPER", "LESS", "LET", "LETHAL", "LETTER", "LEVEL", "LEVER", "LEVITY",
-            "LEVY", "LEWD", "LIAR", "LIBEL", "LICE", "LICENSE", "LICK", "LID", "LIE",
-            "LIED", "LIFE", "LIFT", "LIGHT", "LIKE", "LILAC", "LILY", "LIMB", "LIME",
-            "LIMIT", "LIMP", "LINE", "LINEN", "LINER", "LINGO", "LINK", "LINT",
-            "LION", "LIP", "LIQUID", "LISLE", "LISP", "LIST", "LIT", "LITER", "LITHE",
-            "LITTLE", "LIVE", "LIVELY", "LIVER", "LIZARD", "LOAD", "LOAF", "LOAM",
-            "LOAN", "LOATHE", "LOB", "LOBBY", "LOBE", "LOCAL", "LOCK", "LOCO", "LOCUST",
-            "LODGE", "LOFT", "LOFTY", "LOG", "LOGIC", "LOGIN", "LOIN", "LONE", "LONER",
-            "LONG", "LOOK", "LOOM", "LOON", "LOOP", "LOOSE", "LOOT", "LOP", "LORD",
-            "LORE", "LOSE", "LOSER", "LOSS", "LOST", "LOT", "LOTION", "LOTTO",
-            "LOTUS", "LOUD", "LOUNGE", "LOUSE", "LOUSY", "LOUT", "LOVE", "LOVER",
-            "LOW", "LOWER", "LOWLY", "LOYAL", "LUCK", "LUCKY", "LUGE", "LULL", "LUMEN",
-            "LUMP", "LUMPY", "LUNAR", "LUNCH", "LUNGE", "LUNG", "LUPUS", "LURCH",
-            "LURE", "LURID", "LURK", "LUSH", "LUST", "LUTE", "LUXURY", "LYING",
-            "LYMPH", "LYRIC"
-        ];
-        
-        // Merge them for validity checks
-        const validGuesses = new Set([...answers, ...extras]);
-
-        const rows = 6;
-        const cols = 5;
-        const keys = [
-            "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P",
-            "A", "S", "D", "F", "G", "H", "J", "K", "L",
-            "ENTER", "Z", "X", "C", "V", "B", "N", "M", "⌫"
+        const MONSTERS = [
+          { name: "Slime", hp: 20, damage: 5, emoji: "🦠", color: "text-green-400" },
+          { name: "Rat", hp: 30, damage: 8, emoji: "🐀", color: "text-gray-400" },
+          { name: "Goblin", hp: 40, damage: 10, emoji: "👺", color: "text-green-600" },
+          { name: "Skeleton", hp: 50, damage: 12, emoji: "💀", color: "text-gray-200" },
+          { name: "Orc", hp: 60, damage: 15, emoji: "👹", color: "text-red-500" },
+          { name: "Wizard", hp: 70, damage: 20, emoji: "🧙", color: "text-purple-400" },
+          { name: "Dragon", hp: 100, damage: 30, emoji: "🐉", color: "text-red-600" },
+          { name: "Demon", hp: 120, damage: 35, emoji: "👿", color: "text-purple-600" },
+          { name: "Lich", hp: 150, damage: 40, emoji: "🧟", color: "text-indigo-400" },
+          { name: "Titan", hp: 200, damage: 50, emoji: "🗿", color: "text-stone-400" },
         ];
 
-        // --- STATE VARIABLES ---
-        let currentRow = 0;
-        let currentTile = 0;
-        let targetWord = "";
-        let guesses = [];
-        let isGameOver = false;
+        const SHOP_ITEMS = [
+          { id: 'potion', name: 'Health Potion', cost: 40, Icon: Heart, iconColor: "text-red-500", effect: 'Heals 50 HP', type: 'heal', value: 50 },
+          { id: 'elixir', name: 'Elixir of Life', cost: 100, Icon: Sparkles, iconColor: "text-pink-500", effect: 'Full Health', type: 'fullHeal' },
+          { id: 'shield', name: 'Iron Shield', cost: 100, Icon: Shield, iconColor: "text-blue-500", effect: '+20 Max HP', type: 'maxHp', value: 20 },
+          { id: 'hint', name: 'Magic Scroll', cost: 60, Icon: Scroll, iconColor: "text-yellow-500", effect: 'Reveals 1 Letter next floor', type: 'hint' },
+          { id: 'armor', name: 'Stone Skin', cost: 75, Icon: Gem, iconColor: "text-gray-400", effect: '-50% Damage next floor', type: 'armor' },
+          { id: 'coin', name: 'Lucky Coin', cost: 80, Icon: Coins, iconColor: "text-yellow-400", effect: '2x Gold next floor', type: 'lucky' },
+        ];
 
-        const boardContainer = document.getElementById("board-container");
-        const keyboardContainer = document.getElementById("keyboard-container");
-        const messageContainer = document.getElementById("message-container");
-        const restartBtn = document.getElementById("restart-btn");
-
-        // --- INITIALIZATION ---
-        function initGame() {
-            currentRow = 0;
-            currentTile = 0;
-            guesses = Array(rows).fill().map(() => Array(cols).fill(""));
-            isGameOver = false;
-            messageContainer.innerHTML = "";
-            restartBtn.style.display = "none";
-            
-            // Pick from Answers list only
-            targetWord = answers[Math.floor(Math.random() * answers.length)];
-            console.log("Target:", targetWord); // For debug
-            console.log("Total Answers Available:", answers.length);
-
-            createBoard();
-            createKeyboard();
-        }
-
-        function createBoard() {
-            boardContainer.innerHTML = "";
-            for (let r = 0; r < rows; r++) {
-                const rowDiv = document.createElement('div');
-                rowDiv.classList.add('row');
-                rowDiv.setAttribute('id', 'row-' + r);
-                for (let c = 0; c < cols; c++) {
-                    const tileDiv = document.createElement('div');
-                    tileDiv.classList.add('tile');
-                    tileDiv.setAttribute('id', 'row-' + r + '-tile-' + c);
-                    rowDiv.appendChild(tileDiv);
-                }
-                boardContainer.appendChild(rowDiv);
+        const mulberry32 = (a) => {
+            return () => {
+              var t = a += 0x6D2B79F5;
+              t = Math.imul(t ^ t >>> 15, t | 1);
+              t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+              return ((t ^ t >>> 14) >>> 0) / 4294967296;
             }
         }
 
-        function createKeyboard() {
-            keyboardContainer.innerHTML = "";
-            
-            const row1 = keys.slice(0, 10);
-            const row2 = keys.slice(10, 19);
-            const row3 = keys.slice(19);
+        const getDailySeed = () => {
+          const date = new Date();
+          return parseInt(`${date.getFullYear()}${date.getMonth() + 1}${date.getDate()}`);
+        }
 
-            [row1, row2, row3].forEach(rowKeys => {
-                const rowDiv = document.createElement('div');
-                rowDiv.classList.add('keyboard-row');
-                rowKeys.forEach(key => {
-                    const btn = document.createElement('button');
-                    btn.textContent = key;
-                    btn.setAttribute('id', 'key-' + key);
-                    btn.classList.add('key');
-                    if (key === 'ENTER' || key === '⌫') {
-                        btn.classList.add('large');
-                    }
-                    btn.addEventListener('click', () => handleKeyClick(key));
-                    rowDiv.appendChild(btn);
-                });
-                keyboardContainer.appendChild(rowDiv);
+        const getDailyWordAndMonster = () => {
+            const seed = getDailySeed();
+            const rng = mulberry32(seed);
+            
+            const hardWords = WORD_LIST.filter(w => w.length >= 6);
+            const wordIdx = Math.floor(rng() * hardWords.length);
+            const word = hardWords[wordIdx];
+            
+            const toughMonsters = MONSTERS.slice(-4); 
+            const monsterIdx = Math.floor(rng() * toughMonsters.length);
+            const monster = toughMonsters[monsterIdx];
+            
+            return { word, monster };
+        }
+
+        const Header = ({ level, hp, maxHp, gold, remaining, buffs, isDaily, onMenu }) => (
+          <div className={`w-full max-w-lg ${isDaily ? 'bg-purple-900 border-purple-700' : 'bg-slate-900 border-slate-700'} border-b-4 p-4 sticky top-0 z-10 shadow-lg`}>
+            <div className="flex justify-between items-center mb-2">
+              <div className="flex items-center gap-2">
+                <button onClick={onMenu} className="p-2 text-slate-400 hover:text-white transition-colors">
+                    <Home size={20} />
+                </button>
+                <div className={`p-2 rounded border ${isDaily ? 'bg-purple-800 border-purple-600' : 'bg-slate-800 border-slate-600'}`}>
+                  <span className="text-xs text-slate-300 block uppercase font-bold">{isDaily ? 'Daily' : 'Floor'}</span>
+                  <span className="text-xl font-bold text-white">{isDaily ? 'BOSS' : level}</span>
+                </div>
+                <div className="flex flex-col ml-2">
+                  <div className="flex items-center gap-1 text-red-500 font-bold">
+                     <Heart className="w-4 h-4 fill-current" /> {hp}/{maxHp}
+                  </div>
+                  <div className={`w-24 h-2 rounded-full mt-1 overflow-hidden ${isDaily ? 'bg-purple-800' : 'bg-slate-700'}`}>
+                    <div 
+                      className="h-full bg-red-500 transition-all duration-300"
+                      style={{ width: `${Math.max(0, Math.min(100, (hp / Math.max(1, maxHp)) * 100))}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex flex-col items-end gap-1">
+                <div className={`flex items-center gap-2 px-3 py-1 rounded-full border ${isDaily ? 'bg-purple-800 border-yellow-500' : 'bg-slate-800 border-yellow-700/50'}`}>
+                  <Coins className="w-5 h-5 text-yellow-400" />
+                  <span className="font-bold text-yellow-400">{gold}</span>
+                </div>
+                {!isDaily && <span className="text-[10px] text-slate-500 uppercase tracking-wider">{remaining} Monsters Left</span>}
+              </div>
+            </div>
+            
+            <div className="flex gap-2 min-h-[24px]">
+              {buffs.armor && <div className="text-[10px] bg-gray-800 text-gray-300 px-2 py-0.5 rounded flex items-center gap-1"><Shield size={10} /> Stone Skin</div>}
+              {buffs.lucky && <div className="text-[10px] bg-yellow-900 text-yellow-300 px-2 py-0.5 rounded flex items-center gap-1"><Coins size={10} /> 2x Gold</div>}
+              {buffs.hint && <div className="text-[10px] bg-blue-900 text-blue-300 px-2 py-0.5 rounded flex items-center gap-1"><Scroll size={10} /> Hint Ready</div>}
+            </div>
+          </div>
+        );
+
+        const AdContainer = ({ location }) => (
+          <div className={`w-full max-w-lg mx-auto bg-slate-900/50 border border-dashed border-slate-700 flex flex-col items-center justify-center p-4 my-2 text-slate-600 text-xs text-center ${location === 'interstitial' ? 'h-64' : 'h-16'}`}>
+            <span className="uppercase font-bold tracking-widest">Advertisement Space ({location})</span>
+            <span>(This area is ready for AdSense/AdMob)</span>
+          </div>
+        );
+
+        const TextModal = ({ title, content, onClose }) => (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+            <div className="bg-slate-900 border border-slate-600 rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto flex flex-col shadow-2xl">
+              <div className="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-800 rounded-t-xl">
+                <h2 className="text-2xl font-bold text-white flex items-center gap-2">{title}</h2>
+                <button onClick={onClose} className="text-slate-400 hover:text-white"><X size={24} /></button>
+              </div>
+              <div className="p-6 space-y-4 text-slate-300 text-sm leading-relaxed overflow-y-auto">{content}</div>
+              <div className="p-4 border-t border-slate-700 bg-slate-800 rounded-b-xl">
+                <button onClick={onClose} className="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-lg">Close</button>
+              </div>
+            </div>
+          </div>
+        );
+
+        const RulesModal = ({ onClose }) => (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+            <div className="bg-slate-900 border border-slate-600 rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto flex flex-col shadow-2xl">
+              <div className="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-800 rounded-t-xl">
+                <h2 className="text-2xl font-bold text-white flex items-center gap-2"><Scroll className="text-yellow-500"/> How to Play</h2>
+                <button onClick={onClose} className="text-slate-400 hover:text-white"><X size={24} /></button>
+              </div>
+              <div className="p-6 space-y-6 text-slate-300">
+                <section>
+                  <h3 className="text-lg font-bold text-yellow-400 mb-2 flex items-center gap-2"><Sword size={18}/> Combat & Guessing</h3>
+                  <p className="text-sm">Guess the hidden word to defeat the monster. Each guess reveals clues:</p>
+                  <div className="flex gap-2 mt-2 mb-4">
+                     <div className="w-8 h-8 bg-green-600 border border-green-500 flex items-center justify-center text-white font-bold rounded">A</div>
+                     <span className="text-xs flex items-center">Correct letter & spot</span>
+                  </div>
+                  <div className="flex gap-2 mb-4">
+                     <div className="w-8 h-8 bg-yellow-600 border border-yellow-500 flex items-center justify-center text-white font-bold rounded">B</div>
+                     <span className="text-xs flex items-center">Correct letter, wrong spot</span>
+                  </div>
+                </section>
+                <section>
+                  <h3 className="text-lg font-bold text-red-400 mb-2 flex items-center gap-2"><Heart size={18}/> Health & Damage</h3>
+                  <p className="text-sm mb-2">Every wrong guess, the monster attacks you! If your HP reaches 0, you die.</p>
+                  <p className="text-sm">If you run out of guesses ({MAX_GUESSES}), you take massive damage.</p>
+                </section>
+                <section>
+                  <h3 className="text-lg font-bold text-yellow-400 mb-2 flex items-center gap-2"><Coins size={18}/> Gold & Shop</h3>
+                  <p className="text-sm">Earn gold by defeating monsters. Visit the shop every 5 floors to buy potions, upgrades, and buffs.</p>
+                </section>
+                <section>
+                  <h3 className="text-lg font-bold text-blue-400 mb-2 flex items-center gap-2"><Save size={18}/> Progress Saving</h3>
+                  <p className="text-sm">Your game is saved automatically at the start of every floor. Feel free to close the browser and return later by clicking "Continue Run".</p>
+                </section>
+              </div>
+              <div className="p-4 border-t border-slate-700 bg-slate-800 rounded-b-xl">
+                <button onClick={onClose} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg">Got it!</button>
+              </div>
+            </div>
+          </div>
+        );
+
+        const Keyboard = ({ onKeyPress, usedLetters }) => {
+          const rows = [
+            ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+            ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+            ['ENTER', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'BACK']
+          ];
+
+          const getKeyStyle = (key) => {
+            if (key === 'ENTER' || key === 'BACK') return 'bg-slate-600 text-white w-14 text-xs';
+            const status = usedLetters[key];
+            if (status === 'correct') return 'bg-green-600 text-white border-green-700';
+            if (status === 'present') return 'bg-yellow-600 text-white border-yellow-700';
+            if (status === 'absent') return 'bg-slate-800 text-slate-500 border-slate-900';
+            return 'bg-slate-700 text-white border-b-4 border-slate-800 hover:bg-slate-600 active:border-b-0 active:translate-y-1';
+          };
+
+          return (
+            <div className="w-full max-w-lg p-2 gap-2 flex flex-col items-center select-none">
+              {rows.map((row, i) => (
+                <div key={i} className="flex gap-1 justify-center w-full">
+                  {row.map((key) => (
+                    <button
+                      key={key}
+                      onClick={() => onKeyPress(key)}
+                      className={`h-12 rounded font-bold transition-all shadow-sm flex items-center justify-center ${key.length === 1 ? 'w-8 sm:w-10' : ''} ${getKeyStyle(key)}`}
+                    >
+                      {key === 'BACK' ? <X className="w-5 h-5" /> : key}
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+          );
+        };
+
+        const Grid = ({ guesses, currentGuess, turn, shake, wordLength, revealedIndices, targetWord }) => {
+          const empties = Array.from({ length: MAX_GUESSES - 1 - turn }).map(() => "");
+
+          return (
+            <div className="flex-1 flex flex-col justify-center items-center gap-1.5 p-4 overflow-y-auto">
+              {guesses.map((guess, i) => (
+                <div key={i} className="flex gap-1.5">
+                  {guess.map((l, j) => (
+                    <div 
+                      key={j} 
+                      className={`
+                        w-12 h-12 sm:w-14 sm:h-14 border-2 flex items-center justify-center text-2xl font-bold uppercase select-none rounded
+                        transition-all duration-500 transform flip-in
+                        ${l.status === 'correct' ? 'bg-green-600 border-green-700 text-white' : 
+                          l.status === 'present' ? 'bg-yellow-600 border-yellow-700 text-white' : 
+                          'bg-slate-700 border-slate-800 text-slate-400'}
+                      `}
+                      style={{ animationDelay: `${j * 100}ms` }}
+                    >
+                      {l.char}
+                    </div>
+                  ))}
+                </div>
+              ))}
+              
+              {turn < MAX_GUESSES && (
+                <div className={`flex gap-1.5 ${shake ? 'animate-shake' : ''}`}>
+                  {Array.from({ length: wordLength }).map((_, i) => (
+                    <div 
+                      key={i} 
+                      className={`
+                        w-12 h-12 sm:w-14 sm:h-14 border-2 flex items-center justify-center text-2xl font-bold uppercase rounded
+                        ${currentGuess[i] ? 'border-slate-400 bg-slate-800 text-white animate-pop' : 
+                          revealedIndices.includes(i) ? 'border-blue-500 bg-blue-900/40 text-blue-200' : 'border-slate-700 bg-slate-900/50'}
+                      `}
+                    >
+                      {currentGuess[i] || (revealedIndices.includes(i) && targetWord ? targetWord[i] : "")}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {empties.map((_, i) => (
+                <div key={i + 99} className="flex gap-1.5 opacity-30">
+                  {Array.from({ length: wordLength }).map((__, j) => (
+                    <div key={j} className={`w-12 h-12 sm:w-14 sm:h-14 border-2 border-slate-800 rounded bg-slate-900/20 flex items-center justify-center ${revealedIndices.includes(j) ? 'text-blue-500 font-bold' : ''}`}>
+                       {revealedIndices.includes(j) && targetWord ? targetWord[j] : ""}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          );
+        };
+
+        // --- GAME LOGIC CONTAINER ---
+
+        function Game() {
+          const [hp, setHp] = useState(STARTING_HP);
+          const [maxHp, setMaxHp] = useState(STARTING_HP);
+          const [gold, setGold] = useState(STARTING_GOLD);
+          const [level, setLevel] = useState(1);
+          const [activeBuffs, setActiveBuffs] = useState({});
+          const [difficulty, setDifficulty] = useState('NORMAL');
+          
+          const [stats, setStats] = useState({
+              highScoreEasy: 0,
+              highScoreNormal: 0,
+              highScoreHard: 0,
+              totalGold: 0,
+              monstersSlain: 0
+          });
+          const [isNewRecord, setIsNewRecord] = useState(false);
+          const [dailyCompleted, setDailyCompleted] = useState(false);
+          const [isDailyRun, setIsDailyRun] = useState(false);
+
+          const [gameState, setGameState] = useState('MENU');
+          const [showRules, setShowRules] = useState(false);
+          const [showPrivacy, setShowPrivacy] = useState(false);
+          const [showTerms, setShowTerms] = useState(false);
+          const [copyFeedback, setCopyFeedback] = useState("");
+          const [hasSave, setHasSave] = useState(false);
+          const [deathReason, setDeathReason] = useState(null);
+          
+          const [availableWords, setAvailableWords] = useState([]);
+          const [targetWord, setTargetWord] = useState("");
+          const [currentMonster, setCurrentMonster] = useState(MONSTERS[0]);
+          const [guesses, setGuesses] = useState([]);
+          const [currentGuess, setCurrentGuess] = useState("");
+          const [usedLetters, setUsedLetters] = useState({});
+          const [revealedIndices, setRevealedIndices] = useState([]);
+          const [turn, setTurn] = useState(0);
+          const [shake, setShake] = useState(false);
+          const [feedbackMsg, setFeedbackMsg] = useState("");
+
+          useEffect(() => {
+            const savedData = localStorage.getItem(STORAGE_KEY);
+            if (savedData) setHasSave(true);
+            const dailyData = localStorage.getItem(DAILY_STORAGE_KEY);
+            if (dailyData) {
+                const { date } = JSON.parse(dailyData);
+                const today = new Date().toDateString();
+                if (date === today) setDailyCompleted(true);
+            }
+            const savedStats = localStorage.getItem(STATS_STORAGE_KEY);
+            if (savedStats) setStats(JSON.parse(savedStats));
+            const hasVisited = localStorage.getItem('wordQuestVisited');
+            if (!hasVisited) {
+                setShowRules(true);
+                localStorage.setItem('wordQuestVisited', 'true');
+            }
+          }, []);
+
+          const saveGameData = (data) => {
+            if (isDailyRun) return;
+            try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+              setHasSave(true);
+            } catch (e) { console.error("Save failed:", e); }
+          };
+
+          const updateStats = (newValues) => {
+              const updated = { ...stats, ...newValues };
+              setStats(updated);
+              localStorage.setItem(STATS_STORAGE_KEY, JSON.stringify(updated));
+          }
+
+          const markDailyComplete = () => {
+              const data = { date: new Date().toDateString(), completed: true };
+              localStorage.setItem(DAILY_STORAGE_KEY, JSON.stringify(data));
+              setDailyCompleted(true);
+              let currentSave = {};
+              try {
+                  const saved = localStorage.getItem(STORAGE_KEY);
+                  if (saved) currentSave = JSON.parse(saved);
+              } catch(e) {}
+              const newGold = (currentSave.gold || 0) + 200;
+              const newSave = { 
+                  ...currentSave, 
+                  gold: newGold,
+                  hp: currentSave.hp || STARTING_HP,
+                  maxHp: currentSave.maxHp || STARTING_HP,
+                  level: currentSave.level || 1
+              };
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(newSave));
+              setGold(newGold);
+              setHasSave(true);
+          };
+
+          const loadGame = () => {
+            try {
+              const saved = localStorage.getItem(STORAGE_KEY);
+              if (saved) {
+                const data = JSON.parse(saved);
+                setHp(data.hp);
+                setMaxHp(data.maxHp);
+                setGold(data.gold);
+                setLevel(data.level);
+                setActiveBuffs(data.activeBuffs || {});
+                setDifficulty(data.difficulty || 'NORMAL');
+                setAvailableWords(data.availableWords || []);
+                setTargetWord(data.targetWord || "");
+                setCurrentMonster(data.currentMonster || MONSTERS[0]);
+                setGuesses([]);
+                setCurrentGuess("");
+                setTurn(0);
+                setUsedLetters({});
+                setRevealedIndices(data.revealedIndices || []);
+                setIsDailyRun(false);
+                setGameState('PLAYING');
+              }
+            } catch (e) {
+              console.error("Load failed:", e);
+              alert("Save file corrupted. Starting new game.");
+              startGame();
+            }
+          };
+
+          const returnToMenu = () => {
+            if (!isDailyRun) {
+                saveGameData({ hp, maxHp, gold, level, activeBuffs, difficulty, availableWords, targetWord, currentMonster, revealedIndices });
+            }
+            setGameState('MENU');
+          };
+
+          const startGame = () => {
+            localStorage.removeItem(STORAGE_KEY);
+            setHasSave(false);
+            setHp(STARTING_HP);
+            setMaxHp(STARTING_HP);
+            setGold(STARTING_GOLD);
+            setLevel(1);
+            setActiveBuffs({});
+            setUsedLetters({});
+            setIsDailyRun(false);
+            setIsNewRecord(false);
+            let filteredWords = WORD_LIST;
+            if (difficulty === 'EASY') filteredWords = WORD_LIST.filter(w => w.length >= 4 && w.length <= 5);
+            else if (difficulty === 'NORMAL') filteredWords = WORD_LIST.filter(w => w.length >= 4 && w.length <= 6);
+            else if (difficulty === 'HARD') filteredWords = WORD_LIST.filter(w => w.length >= 5);
+            const uniqueWords = [...new Set(filteredWords)];
+            setAvailableWords(uniqueWords);
+            setTimeout(() => startLevel(1, uniqueWords, {}, true), 50);
+          };
+
+          const startDaily = () => {
+              setIsDailyRun(true);
+              setIsNewRecord(false);
+              const { word, monster } = getDailyWordAndMonster();
+              setTargetWord(word);
+              setCurrentMonster(monster);
+              setHp(200);
+              setMaxHp(200);
+              setGold(0);
+              setLevel(1);
+              setActiveBuffs({});
+              setGuesses([]);
+              setCurrentGuess("");
+              setTurn(0);
+              setUsedLetters({});
+              setRevealedIndices([]);
+              setFeedbackMsg("DAILY CHALLENGE START!");
+              setTimeout(() => setFeedbackMsg(""), 2500);
+              setGameState('PLAYING');
+          };
+
+          const startLevel = (lvl, currentBag = availableWords, currentBuffs = activeBuffs, isNewGame = false) => {
+            if (currentBag.length === 0) {
+                setGameState('VICTORY');
+                localStorage.removeItem(STORAGE_KEY);
+                return;
+            }
+            const randomIndex = Math.floor(Math.random() * currentBag.length);
+            const word = currentBag[randomIndex];
+            const newBag = [...currentBag];
+            newBag.splice(randomIndex, 1);
+            setAvailableWords(newBag);
+            let monsterIdx = Math.floor((lvl - 1) / 10);
+            if (monsterIdx >= MONSTERS.length) monsterIdx = MONSTERS.length - 1;
+            if (lvl > 5 && Math.random() > 0.7) monsterIdx = Math.min(monsterIdx + 1, MONSTERS.length - 1);
+            const newMonster = MONSTERS[monsterIdx];
+            setCurrentMonster(newMonster);
+            setTargetWord(word);
+            setGuesses([]);
+            setCurrentGuess("");
+            setTurn(0);
+            setUsedLetters({});
+            setFeedbackMsg("");
+            setGameState('PLAYING');
+            let nextRevealed = [];
+            let nextBuffs = { ...currentBuffs };
+            if (currentBuffs.hint) {
+              const idx = Math.floor(Math.random() * word.length);
+              nextRevealed = [idx];
+              setRevealedIndices(nextRevealed);
+              setFeedbackMsg("Magic Scroll Revealed a Letter!");
+              nextBuffs.hint = false;
+              setActiveBuffs(nextBuffs);
+            } else {
+              setRevealedIndices([]);
+            }
+            saveGameData({ hp: hp, maxHp: maxHp, gold: gold, level: lvl, activeBuffs: nextBuffs, difficulty: difficulty, availableWords: newBag, targetWord: word, currentMonster: newMonster, revealedIndices: nextRevealed });
+          };
+
+          const handleKeyPress = useCallback((key) => {
+            if (gameState !== 'PLAYING') return;
+            if (key === 'BACK') { setCurrentGuess(prev => prev.slice(0, -1)); return; }
+            if (key === 'ENTER') { submitGuess(); return; }
+            if (currentGuess.length < targetWord.length) { setCurrentGuess(prev => prev + key); }
+          }, [currentGuess, gameState, targetWord]);
+
+          useEffect(() => {
+            const handleKeyDown = (e) => {
+              const key = e.key.toUpperCase();
+              if (key === 'BACKSPACE') handleKeyPress('BACK');
+              else if (key === 'ENTER') handleKeyPress('ENTER');
+              else if (/^[A-Z]$/.test(key)) handleKeyPress(key);
+            };
+            window.addEventListener('keydown', handleKeyDown);
+            return () => window.removeEventListener('keydown', handleKeyDown);
+          }, [handleKeyPress]);
+
+          const submitGuess = () => {
+            const wordLength = targetWord.length;
+            if (currentGuess.length !== wordLength) { triggerShake("Too short!"); return; }
+            const newUsedLetters = { ...usedLetters };
+            const result = [];
+            const targetArr = targetWord.split('');
+            const guessArr = currentGuess.split('');
+            guessArr.forEach((char, i) => {
+              if (char === targetArr[i]) {
+                result[i] = { char, status: 'correct' };
+                newUsedLetters[char] = 'correct';
+                targetArr[i] = null;
+              }
             });
-        }
-
-        // --- INPUT HANDLING ---
-        function handleKeyClick(key) {
-            if (key === 'ENTER') {
-                checkRow();
-            } else if (key === '⌫') {
-                deleteLetter();
-            } else {
-                addLetter(key);
-            }
-        }
-
-        document.addEventListener('keydown', (e) => {
-            if(isGameOver) return;
-            const key = e.key.toUpperCase();
-            if (key === 'ENTER') checkRow();
-            else if (key === 'BACKSPACE') deleteLetter();
-            else if (/^[A-Z]$/.test(key)) addLetter(key);
-        });
-
-        // --- GAME LOGIC ---
-        function addLetter(letter) {
-            if (isGameOver) return;
-            if (currentTile < cols) {
-                const tile = document.getElementById(`row-${currentRow}-tile-${currentTile}`);
-                tile.textContent = letter;
-                tile.classList.add('filled');
-                guesses[currentRow][currentTile] = letter;
-                currentTile++;
-            }
-        }
-
-        function deleteLetter() {
-            if (isGameOver) return;
-            if (currentTile > 0) {
-                currentTile--;
-                const tile = document.getElementById(`row-${currentRow}-tile-${currentTile}`);
-                tile.textContent = "";
-                tile.classList.remove('filled');
-                guesses[currentRow][currentTile] = "";
-            }
-        }
-
-        function checkRow() {
-            if (isGameOver) return;
-            if (currentTile < cols) {
-                showMessage("Not enough letters");
-                shakeRow();
-                return;
-            }
-
-            const guessWord = guesses[currentRow].join("");
-            
-            // Check against the merged Set of valid words
-            if (!validGuesses.has(guessWord)) {
-                showMessage("Word not in list");
-                shakeRow();
-                return;
-            }
-
-            flipTiles();
-            
-            if (guessWord === targetWord) {
-                showMessage("Splendid!");
-                isGameOver = true;
-                restartBtn.style.display = "block";
-            } else {
-                if (currentRow >= rows - 1) {
-                    isGameOver = true;
-                    showMessage("Game Over! Word: " + targetWord);
-                    restartBtn.style.display = "block";
+            guessArr.forEach((char, i) => {
+              if (!result[i]) {
+                const indexInTarget = targetArr.indexOf(char);
+                if (indexInTarget !== -1) {
+                  result[i] = { char, status: 'present' };
+                  if (newUsedLetters[char] !== 'correct') newUsedLetters[char] = 'present';
+                  targetArr[indexInTarget] = null;
                 } else {
-                    currentRow++;
-                    currentTile = 0;
+                  result[i] = { char, status: 'absent' };
+                  if (!newUsedLetters[char]) newUsedLetters[char] = 'absent';
+                }
+              }
+            });
+            setGuesses(prev => [...prev, result]);
+            setUsedLetters(newUsedLetters);
+            setTurn(prev => prev + 1);
+            setCurrentGuess("");
+            if (currentGuess === targetWord) {
+              handleWin();
+            } else {
+              if (turn + 1 >= MAX_GUESSES) {
+                handleLoss('turns');
+              } else {
+                handleMonsterAttack();
+              }
+            }
+          };
+
+          const handleMonsterAttack = () => {
+            let dmg = Math.floor(currentMonster.damage * 0.5); 
+            if (activeBuffs.armor) { dmg = Math.ceil(dmg * 0.5); }
+            const newHp = Math.max(0, hp - dmg);
+            setHp(newHp);
+            setFeedbackMsg(activeBuffs.armor ? `Stone Skin blocked! You take ${dmg} dmg.` : `The ${currentMonster.name} hits you for ${dmg} dmg!`);
+            if (newHp <= 0) { handleLoss('hp'); }
+          };
+
+          const handleWin = () => {
+              if (isDailyRun) {
+                  markDailyComplete();
+                  setGameState('DAILY_VICTORY');
+                  return;
+              }
+            let goldEarned = 50 + (MAX_GUESSES - turn) * 15;
+            if (activeBuffs.lucky) { goldEarned *= 2; }
+            updateStats({ totalGold: stats.totalGold + goldEarned, monstersSlain: stats.monstersSlain + 1 });
+            const newGold = gold + goldEarned;
+            setGold(newGold);
+            const nextBuffs = { ...activeBuffs, armor: false, lucky: false };
+            setActiveBuffs(nextBuffs);
+            if (level % 5 === 0) {
+              setGameState('SHOP');
+              saveGameData({ hp, maxHp, gold: newGold, level, activeBuffs: nextBuffs, difficulty, availableWords, targetWord, currentMonster, revealedIndices });
+            } else {
+              setFeedbackMsg(`Victory! +${goldEarned} Gold`);
+              setTimeout(() => {
+                setLevel(prev => prev + 1);
+                startLevel(level + 1, availableWords, nextBuffs);
+              }, 1500);
+            }
+          };
+
+          const handleLoss = (reason) => {
+            setDeathReason(reason);
+            setGameState('REVIVE_PROMPT');
+          };
+
+          const revivePlayer = () => {
+            if (isDailyRun) { alert("No revives in Daily Challenge!"); return; }
+            const sacrificeCost = Math.max(MIN_REVIVE_GOLD, Math.floor(gold / 2));
+            if (gold < sacrificeCost) { alert(`You need at least ${sacrificeCost} Gold to revive!`); return; }
+            setGold(prev => prev - sacrificeCost);
+            setGameState('PLAYING');
+            if (deathReason === 'hp') {
+                setHp(Math.floor(maxHp * 0.5));
+                setFeedbackMsg("Revived! 50% HP Restored.");
+            } else if (deathReason === 'turns') {
+                setTurn(turn - 3);
+                setFeedbackMsg("Second Wind! +3 Guesses.");
+            }
+          };
+
+          const confirmGameOver = () => {
+            if (!isDailyRun) {
+                localStorage.removeItem(STORAGE_KEY);
+                setHasSave(false);
+                const currentModeKey = difficulty === 'EASY' ? 'highScoreEasy' : difficulty === 'NORMAL' ? 'highScoreNormal' : 'highScoreHard';
+                if (level > stats[currentModeKey]) {
+                    updateStats({ [currentModeKey]: level });
+                    setIsNewRecord(true);
+                } else {
+                    setIsNewRecord(false);
                 }
             }
-        }
+            setGameState('GAMEOVER');
+          };
 
-        // --- ANIMATIONS & COLORING ---
-        function flipTiles() {
-            const rowTiles = document.getElementById(`row-${currentRow}`).children;
-            const guess = guesses[currentRow];
-            const checkTarget = targetWord.split("");
-            const colors = Array(5).fill("absent");
+          const triggerShake = (msg) => {
+            setShake(true);
+            setFeedbackMsg(msg);
+            setTimeout(() => { setShake(false); setFeedbackMsg(""); }, 600);
+          };
 
-            // 1. Find Greens
-            for (let i = 0; i < 5; i++) {
-                if (guess[i] === checkTarget[i]) {
-                    colors[i] = "correct";
-                    checkTarget[i] = null;
-                }
+          const buyItem = (item) => {
+            if (gold >= item.cost) {
+              const newGold = gold - item.cost;
+              let newHp = hp;
+              let newMaxHp = maxHp;
+              let newBuffs = { ...activeBuffs };
+              if (item.type === 'heal') { newHp = Math.min(maxHp, hp + item.value); }
+              else if (item.type === 'fullHeal') { newHp = maxHp; }
+              else if (item.type === 'maxHp') { newMaxHp = maxHp + item.value; newHp = newHp + item.value; }
+              else if (item.type === 'hint') {
+                newBuffs.hint = true;
+                alert("Magic Scroll Purchased! A letter will be revealed on the next floor.");
+              } else if (item.type === 'armor') {
+                newBuffs.armor = true;
+                alert("Stone Skin Purchased! Damage reduced by 50% for the next floor.");
+              } else if (item.type === 'lucky') {
+                newBuffs.lucky = true;
+                alert("Lucky Coin Purchased! Gold rewards doubled for the next floor.");
+              }
+              setGold(newGold);
+              setHp(newHp);
+              setMaxHp(newMaxHp);
+              setActiveBuffs(newBuffs);
+              saveGameData({ hp: newHp, maxHp: newMaxHp, gold: newGold, level, activeBuffs: newBuffs, difficulty, availableWords, targetWord, currentMonster, revealedIndices });
+            } else {
+              triggerShake("Not enough gold!");
             }
+          };
 
-            // 2. Find Yellows
-            for (let i = 0; i < 5; i++) {
-                if (colors[i] === "correct") continue;
-                const index = checkTarget.indexOf(guess[i]);
-                if (index > -1) {
-                    colors[i] = "present";
-                    checkTarget[index] = null;
-                }
+          const shareResult = () => {
+              let text = '';
+              if (isDailyRun && gameState === 'DAILY_VICTORY') {
+                   text = `📅 Word Quest Daily\n🏆 Boss Defeated!\n🔥 Strategy: ${MAX_GUESSES - turn}/${MAX_GUESSES} Guesses\n⚔️ Try it at guessaword.org`;
+              } else if (gameState === 'SHOP') {
+                   text = `🏰 Word Quest RPG\n⚔️ Currently on Floor ${level} (${difficulty})\n💰 Holding ${gold} Gold\n❤️ HP: ${hp}/${maxHp}\n⚔️ Beat my run at guessaword.org`;
+              } else {
+                   text = `🏰 Word Quest RPG\n💀 Died on Floor ${level} (${difficulty})\n💰 Collected ${gold} Gold\n⚔️ Try to beat me at guessaword.org`;
+              }
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed"; 
+            textArea.style.left = "-9999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+              document.execCommand('copy');
+              setCopyFeedback("Copied to clipboard!");
+            } catch (err) {
+              console.error('Fallback: Oops, unable to copy', err);
+              setCopyFeedback("Copy failed :(");
             }
+            document.body.removeChild(textArea);
+            setTimeout(() => setCopyFeedback(""), 2000);
+          };
 
-            // Apply colors
-            for (let i = 0; i < 5; i++) {
-                setTimeout(() => {
-                    // Color Board Tile
-                    const tile = rowTiles[i];
-                    tile.classList.add('flip');
-                    tile.classList.add(colors[i]);
-                    tile.style.border = "none";
-
-                    // Color Keyboard Key
-                    const keyLetter = guess[i];
-                    const keyBtn = document.getElementById('key-' + keyLetter);
+          if (gameState === 'MENU') {
+            return (
+              <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-4 font-sans relative">
+                {showRules && <RulesModal onClose={() => setShowRules(false)} />}
+                {showPrivacy && <TextModal title="Privacy Policy" content={
+                  <div className="space-y-4">
+                    <p><strong>Last Updated: {new Date().toLocaleDateString()}</strong></p>
+                    <section>
+                      <h3 className="font-bold text-white mb-1">1. Introduction</h3>
+                      <p>Welcome to Word Quest RPG. Your privacy is important to us. This policy explains how we handle information when you play our game.</p>
+                    </section>
+                    <section>
+                      <h3 className="font-bold text-white mb-1">2. Data We Collect</h3>
+                      <p>We do not collect personally identifiable information (such as names, emails, or phone numbers) directly. All game progress (gold, health, floor level) is stored locally on your device using your browser's LocalStorage.</p>
+                    </section>
+                    <section>
+                      <h3 className="font-bold text-white mb-1">3. Advertising & Cookies</h3>
+                      <p>We use third-party vendors, including Google, to serve ads based on your prior visits to our website or other websites.</p>
+                      <ul className="list-disc pl-5 mt-2 space-y-1">
+                        <li>Google's use of advertising cookies enables it and its partners to serve ads to you based on your visit to this site and/or other sites on the Internet.</li>
+                        <li>You may opt out of personalized advertising by visiting <a href="https://www.google.com/settings/ads" target="_blank" rel="noreferrer" className="text-blue-400 underline">Google Ad Settings</a>.</li>
+                        <li>Alternatively, you can opt out of a third-party vendor's use of cookies for personalized advertising by visiting <a href="https://www.aboutads.info" target="_blank" rel="noreferrer" className="text-blue-400 underline">www.aboutads.info</a>.</li>
+                      </ul>
+                    </section>
+                    <section>
+                      <h3 className="font-bold text-white mb-1">4. Contact</h3>
+                      <p>If you have questions about this policy, please contact us via the link in the footer.</p>
+                    </section>
+                  </div>
+                } onClose={() => setShowPrivacy(false)} />}
+                
+                {showTerms && <TextModal title="Terms of Service" content={
+                  <div className="space-y-4">
+                    <section>
+                      <h3 className="font-bold text-white mb-1">1. Acceptance of Terms</h3>
+                      <p>By accessing and playing Word Quest RPG, you accept and agree to be bound by the terms and provision of this agreement.</p>
+                    </section>
+                    <section>
+                      <h3 className="font-bold text-white mb-1">2. Use License</h3>
+                      <p>Permission is granted to temporarily play the materials (information or software) on Word Quest RPG's website for personal, non-commercial transitory viewing only. You may not modify, copy, or attempt to decompile or reverse engineer any software contained on the website.</p>
+                    </section>
+                    <section>
+                      <h3 className="font-bold text-white mb-1">3. Disclaimer</h3>
+                      <p>The materials on Word Quest RPG's website are provided "as is". We make no warranties, expressed or implied, and hereby disclaim and negate all other warranties.</p>
+                    </section>
+                    <section>
+                      <h3 className="font-bold text-white mb-1">4. Limitations</h3>
+                      <p>In no event shall Word Quest RPG or its suppliers be liable for any damages (including, without limitation, damages for loss of data or profit) arising out of the use or inability to use the materials on this site.</p>
+                    </section>
+                    <section>
+                      <h3 className="font-bold text-white mb-1">5. Fair Play</h3>
+                      <p>We reserve the right to ban users or reset progress if we detect cheating, hacking, or exploitation of game bugs.</p>
+                    </section>
+                  </div>
+                } onClose={() => setShowTerms(false)} />}
+                
+                <div className="max-w-md w-full text-center space-y-8 animate-fade-in flex-1 flex flex-col justify-center">
+                  <div className="space-y-2">
+                     <div className="flex justify-center"><Sword className="w-16 h-16 text-yellow-500" /></div>
+                     <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-600 tracking-tighter drop-shadow-sm">
+                      GUESS A WORD
+                    </h1>
+                    <h2 className="text-xl text-slate-400 font-serif italic">The Cursed Tower</h2>
+                  </div>
+                  
+                  <div className="bg-slate-900 p-6 rounded-lg border border-slate-700 shadow-2xl space-y-4">
+                    <div className="flex justify-between items-center mb-2">
+                       <p className="text-slate-300 text-sm">Select Difficulty:</p>
+                       <button onClick={() => setShowRules(true)} className="text-blue-400 text-xs flex items-center gap-1 hover:text-white"><HelpCircle size={14} /> How to Play</button>
+                    </div>
                     
-                    if (keyBtn) {
-                        const oldClass = keyBtn.classList.contains('correct') ? 'correct' : 
-                                         keyBtn.classList.contains('present') ? 'present' : 
-                                         keyBtn.classList.contains('absent') ? 'absent' : '';
+                    <div className="grid grid-cols-3 gap-2 bg-slate-800 p-1 rounded-lg">
+                      <button 
+                        onClick={() => setDifficulty('EASY')}
+                        className={`py-2 rounded text-sm font-bold transition-all ${difficulty === 'EASY' ? 'bg-green-600 text-white shadow-lg scale-105' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                      >
+                        Squire
+                        <span className="block text-[10px] font-normal opacity-80">4-5 Letters</span>
+                        <span className="block text-[9px] text-green-200 mt-1">Best: {stats.highScoreEasy}</span>
+                      </button>
+                      <button 
+                        onClick={() => setDifficulty('NORMAL')}
+                        className={`py-2 rounded text-sm font-bold transition-all ${difficulty === 'NORMAL' ? 'bg-blue-600 text-white shadow-lg scale-105' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                      >
+                        Knight
+                        <span className="block text-[10px] font-normal opacity-80">4-6 Letters</span>
+                        <span className="block text-[9px] text-blue-200 mt-1">Best: {stats.highScoreNormal}</span>
+                      </button>
+                      <button 
+                        onClick={() => setDifficulty('HARD')}
+                        className={`py-2 rounded text-sm font-bold transition-all ${difficulty === 'HARD' ? 'bg-red-600 text-white shadow-lg scale-105' : 'text-slate-400 hover:text-white hover:bg-slate-700'}`}
+                      >
+                        Legend
+                        <span className="block text-[10px] font-normal opacity-80">5-7 Letters</span>
+                        <span className="block text-[9px] text-red-200 mt-1">Best: {stats.highScoreHard}</span>
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-3 pt-2">
+                        <button 
+                            onClick={startDaily}
+                            disabled={dailyCompleted}
+                            className={`w-full py-3 rounded-lg text-lg font-bold shadow-lg flex items-center justify-center gap-2 transform transition border ${dailyCompleted ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed' : 'bg-purple-900 hover:bg-purple-800 border-purple-500 text-white hover:scale-[1.02]'}`}
+                        >
+                            <Calendar size={20} />
+                            {dailyCompleted ? "Daily Completed" : "Daily Challenge"}
+                        </button>
 
-                        // Upgrade logic
-                        if (colors[i] === 'correct') {
-                            keyBtn.classList.remove('present', 'absent');
-                            keyBtn.classList.add('correct');
-                        } else if (colors[i] === 'present' && oldClass !== 'correct') {
-                            keyBtn.classList.remove('absent');
-                            keyBtn.classList.add('present');
-                        } else if (colors[i] === 'absent' && oldClass !== 'correct' && oldClass !== 'present') {
-                            keyBtn.classList.add('absent');
-                        }
-                    }
+                        {hasSave && (
+                        <button 
+                            onClick={loadGame}
+                            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg text-lg shadow-lg flex items-center justify-center gap-2 transform transition hover:scale-[1.02]"
+                        >
+                            <Save size={20} /> Continue Run
+                        </button>
+                        )}
 
-                }, 300 * i);
-            }
+                        <button 
+                        onClick={startGame}
+                        className={`w-full ${hasSave ? 'bg-slate-700 hover:bg-red-900/50 text-slate-300' : 'bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white'} font-bold py-3 rounded-lg text-lg shadow-lg transform transition hover:scale-[1.02]`}
+                        >
+                        {hasSave ? "Start New Run (Reset)" : "Enter Dungeon"}
+                        </button>
+                    </div>
+                  </div>
+
+                  <div className="text-slate-400 text-xs space-y-4 max-w-sm mx-auto">
+                     <div className="bg-slate-900/50 p-4 rounded border border-slate-800 text-left">
+                        <h3 className="font-bold text-slate-300 mb-1 flex items-center gap-2"><Info size={14}/> About the Game</h3>
+                        <p className="leading-relaxed">
+                            Word Quest RPG is a roguelike word puzzle game. Battle your way through infinite floors of monsters by solving word puzzles. 
+                            Manage your health and gold, buy powerful items, and see how high you can climb the Cursed Tower.
+                        </p>
+                        <p className="mt-2 text-blue-300 flex items-center gap-1">
+                            <Save size={12} /> Progress is auto-saved every floor.
+                        </p>
+                     </div>
+                     
+                     <div className="flex justify-center items-center gap-4 text-slate-500 flex-wrap">
+                         <button onClick={() => setShowPrivacy(true)} className="hover:text-white underline">Privacy Policy</button>
+                         <span className="text-slate-700">|</span>
+                         <button onClick={() => setShowTerms(true)} className="hover:text-white underline">Terms of Service</button>
+                         <span className="text-slate-700">|</span>
+                         <a href="mailto:contact@guessaword.org" className="hover:text-white underline flex items-center gap-1"><Mail size={12}/> Contact</a>
+                     </div>
+                     <p>© GuessAWord.org</p>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          if (gameState === 'REVIVE_PROMPT') {
+              const sacrificeCost = Math.max(MIN_REVIVE_GOLD, Math.floor(gold / 2));
+              const canAfford = gold >= sacrificeCost;
+
+              return (
+                <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-4">
+                    <div className="max-w-md w-full bg-slate-900 border-2 border-slate-700 rounded-xl p-8 text-center shadow-2xl animate-fade-in-up">
+                        <Heart className="w-16 h-16 text-slate-700 mx-auto mb-4 animate-pulse" />
+                        <h2 className="text-3xl font-bold text-white mb-2">You have fallen!</h2>
+                        <p className="text-slate-400 mb-8">
+                            {deathReason === 'hp' ? "The monster struck a fatal blow." : "You ran out of strength (guesses)."}
+                        </p>
+                        
+                        <div className="space-y-3">
+                            {!isDailyRun && (
+                            <button 
+                                onClick={revivePlayer}
+                                disabled={!canAfford}
+                                className={`w-full py-4 rounded-lg font-bold text-lg flex items-center justify-center gap-2 transition-all ${canAfford ? 'bg-yellow-600 hover:bg-yellow-500 text-white' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}`}
+                            >
+                                <Coins size={20} /> Sacrifice {sacrificeCost} Gold to Revive
+                            </button>
+                            )}
+                            
+                            {!canAfford && !isDailyRun && (
+                                <p className="text-xs text-red-400">You need at least {MIN_REVIVE_GOLD} gold to revive.</p>
+                            )}
+
+                            <div className="h-px bg-slate-700 my-4"></div>
+
+                            <button 
+                                onClick={confirmGameOver}
+                                className="w-full text-slate-500 hover:text-red-400 py-2 text-sm"
+                            >
+                                Accept Fate (Game Over)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+              );
+          }
+
+          if (gameState === 'DAILY_VICTORY') {
+              return (
+              <div className="min-h-screen bg-purple-950 text-slate-100 flex flex-col items-center justify-center p-4">
+                <div className="max-w-md w-full text-center space-y-6">
+                  <Trophy className="w-24 h-24 text-purple-400 mx-auto animate-bounce" />
+                  <h1 className="text-4xl font-bold text-purple-400">DAILY CRUSHED!</h1>
+                  <div className="bg-slate-900/80 p-6 rounded border border-purple-600">
+                    <p className="text-lg text-white">Daily Boss Defeated!</p>
+                    <p className="text-sm text-slate-400 mt-2">Come back tomorrow for a new challenge.</p>
+                    <div className="mt-4 bg-yellow-900/40 p-3 rounded flex items-center justify-center gap-2 border border-yellow-700">
+                        <Coins className="text-yellow-400" />
+                        <span className="font-bold text-yellow-100">+200 Gold added to Main Run</span>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={shareResult}
+                    className="flex items-center justify-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-500 rounded text-white font-bold w-full mb-2"
+                  >
+                    <Share2 size={18} /> {copyFeedback || "Share Daily Result"}
+                  </button>
+                  <button 
+                    onClick={() => setGameState('MENU')}
+                    className="px-8 py-3 bg-slate-700 hover:bg-slate-600 rounded text-white font-bold w-full"
+                  >
+                    Return to Menu
+                  </button>
+                </div>
+              </div>
+            );
+          }
+
+          if (gameState === 'VICTORY') {
+            return (
+              <div className="min-h-screen bg-yellow-950 text-slate-100 flex flex-col items-center justify-center p-4">
+                <div className="max-w-md w-full text-center space-y-6">
+                  <Trophy className="w-24 h-24 text-yellow-400 mx-auto animate-bounce" />
+                  <h1 className="text-4xl font-bold text-yellow-400">TOWER CONQUERED!</h1>
+                  <div className="bg-slate-900/80 p-6 rounded border border-yellow-600">
+                    <p className="text-lg text-white">You have defeated all {WORD_LIST.length} floors!</p>
+                    <p className="text-2xl font-bold text-yellow-500 mt-2">{gold} Gold Collected</p>
+                  </div>
+                  <button 
+                    onClick={shareResult}
+                    className="flex items-center justify-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-500 rounded text-white font-bold w-full mb-2"
+                  >
+                    <Share2 size={18} /> {copyFeedback || "Share Result"}
+                  </button>
+                  <button 
+                    onClick={() => setGameState('MENU')}
+                    className="px-8 py-3 bg-slate-700 hover:bg-slate-600 rounded text-white font-bold w-full"
+                  >
+                    Play Again
+                  </button>
+                </div>
+              </div>
+            );
+          }
+
+          if (gameState === 'GAMEOVER') {
+            return (
+              <div className="min-h-screen bg-red-950 text-slate-100 flex flex-col items-center justify-center p-4">
+                <div className="max-w-md w-full text-center space-y-6">
+                  <Skull className="w-24 h-24 text-red-500 mx-auto animate-bounce" />
+                  <h1 className="text-4xl font-bold text-red-500">{isDailyRun ? "DAILY FAILED" : "YOU DIED"}</h1>
+                  <div className="bg-slate-900/80 p-6 rounded border border-red-900 relative overflow-hidden">
+                    {isNewRecord && !isDailyRun && (
+                        <div className="absolute top-0 right-0 bg-yellow-500 text-yellow-900 text-xs font-bold px-3 py-1 rounded-bl shadow-lg animate-pulse">
+                            NEW RECORD!
+                        </div>
+                    )}
+                    <p className="text-slate-400">{isDailyRun ? "The Daily Boss remains..." : `You reached Floor ${level}`}</p>
+                    {!isDailyRun && <p className="text-2xl font-bold text-yellow-500 mt-2">{gold} Gold Collected</p>}
+                    <p className="mt-4 text-sm text-slate-500">The word was: <span className="text-white font-bold">{targetWord}</span></p>
+                  </div>
+                  <button 
+                    onClick={shareResult}
+                    className="flex items-center justify-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-500 rounded text-white font-bold w-full mb-2"
+                  >
+                    <Share2 size={18} /> {copyFeedback || "Share Result"}
+                  </button>
+                  <button 
+                    onClick={() => setGameState('MENU')}
+                    className="px-8 py-3 bg-slate-700 hover:bg-slate-600 rounded text-white font-bold w-full"
+                  >
+                    Return to Menu
+                  </button>
+                </div>
+              </div>
+            );
+          }
+
+          if (gameState === 'SHOP') {
+            return (
+              <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col items-center p-4">
+                 <Header level={level} hp={hp} maxHp={maxHp} gold={gold} remaining={availableWords.length} buffs={activeBuffs} isDaily={isDailyRun} onMenu={returnToMenu} />
+                 
+                 <div className="max-w-lg w-full mt-8 flex-1">
+                    <div className="flex items-center gap-2 mb-6 justify-center">
+                      <Sparkles className="text-yellow-400" />
+                      <h2 className="text-2xl font-serif text-yellow-100">The Merchant</h2>
+                    </div>
+
+                    <AdContainer location="banner" />
+
+                    <div className="grid gap-3 mt-4">
+                      {SHOP_ITEMS.map(item => (
+                        <button 
+                          key={item.id}
+                          onClick={() => buyItem(item)}
+                          disabled={gold < item.cost}
+                          className={`flex items-center justify-between p-3 rounded-lg border transition-all ${gold >= item.cost ? 'bg-slate-800 border-slate-600 hover:bg-slate-700 hover:scale-[1.02]' : 'bg-slate-900 border-slate-800 opacity-50 cursor-not-allowed'}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-full border border-slate-700 bg-slate-900`}>
+                              <item.Icon className={`w-4 h-4 ${item.iconColor}`} />
+                            </div>
+                            <div className="text-left">
+                              <div className="font-bold text-sm">{item.name}</div>
+                              <div className="text-[10px] text-slate-400">{item.effect}</div>
+                            </div>
+                          </div>
+                          <div className="font-bold text-yellow-500 flex items-center gap-1 text-sm">
+                            {item.cost} <Coins size={12} />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="space-y-2 mt-6">
+                        <button 
+                        onClick={() => {
+                            setLevel(l => l + 1);
+                            startLevel(level + 1);
+                        }}
+                        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-lg flex items-center justify-center gap-2 shadow-lg"
+                        >
+                        Next Floor <Sword size={16} />
+                        </button>
+
+                        <button 
+                            onClick={shareResult}
+                            className="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold py-3 rounded-lg flex items-center justify-center gap-2"
+                        >
+                            <Share2 size={16} /> {copyFeedback || "Share Progress"}
+                        </button>
+                    </div>
+                 </div>
+              </div>
+            );
+          }
+
+          return (
+            <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center">
+              <Header level={level} hp={hp} maxHp={maxHp} gold={gold} remaining={availableWords.length} buffs={activeBuffs} isDaily={isDailyRun} onMenu={returnToMenu} />
+
+              {/* Monster Display */}
+              <div className={`w-full max-w-lg p-4 flex flex-col items-center justify-center relative bg-gradient-to-b ${isDailyRun ? 'from-purple-900 to-slate-950' : 'from-slate-900 to-slate-950'} border-b border-slate-800`}>
+                <div className={`text-6xl mb-2 filter drop-shadow-xl animate-float`}>{currentMonster.emoji}</div>
+                <div className={`text-xl font-bold ${currentMonster.color}`}>{currentMonster.name}</div>
+                <div className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                   <Sword size={12} /> Attack: {activeBuffs.armor ? Math.ceil(currentMonster.damage * 0.5) : currentMonster.damage} DMG
+                   {activeBuffs.armor && <span className="text-blue-400 font-bold">(Shielded)</span>}
+                </div>
+                
+                {feedbackMsg && (
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-slate-900/90 border border-slate-600 text-white px-4 py-2 rounded-lg shadow-xl whitespace-nowrap z-20 animate-fade-in-up">
+                    {feedbackMsg}
+                  </div>
+                )}
+              </div>
+
+              <AdContainer location="banner" />
+
+              {/* Game Grid */}
+              <Grid 
+                guesses={guesses} 
+                currentGuess={currentGuess} 
+                turn={turn} 
+                shake={shake} 
+                wordLength={targetWord ? targetWord.length : 5} 
+                revealedIndices={revealedIndices}
+                targetWord={targetWord}
+              />
+
+              {/* Controls */}
+              <Keyboard onKeyPress={handleKeyPress} usedLetters={usedLetters} />
+            </div>
+          );
         }
 
-        function showMessage(msg) {
-            const toast = document.createElement('div');
-            toast.textContent = msg;
-            toast.classList.add('toast');
-            messageContainer.innerHTML = '';
-            messageContainer.appendChild(toast);
-            setTimeout(() => {
-                if(messageContainer.contains(toast)) {
-                    messageContainer.removeChild(toast);
-                }
-            }, 2000);
-        }
-
-        function shakeRow() {
-            const row = document.getElementById(`row-${currentRow}`);
-            row.style.animation = "shake 0.5s";
-            setTimeout(() => row.style.animation = "", 500);
-        }
-
-        const styleSheet = document.createElement("style");
-        styleSheet.innerText = `
-            @keyframes shake {
-                0% { transform: translateX(0); }
-                25% { transform: translateX(-5px); }
-                50% { transform: translateX(5px); }
-                75% { transform: translateX(-5px); }
-                100% { transform: translateX(0); }
-            }
-        `;
-        document.head.appendChild(styleSheet);
-
-        initGame();
-
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Game />);
     </script>
 </body>
 </html>
-
-
-
-
