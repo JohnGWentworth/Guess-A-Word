@@ -919,11 +919,11 @@
           const shareResult = () => {
               let text = '';
               if (isDailyRun && gameState === 'DAILY_VICTORY') {
-                   text = `📅 Word Quest Daily\n🏆 Boss Defeated!\n🔥 Strategy: ${MAX_GUESSES - turn}/${MAX_GUESSES} Guesses\n⚔️ Try it at guessaword.org`;
+                   text = `📅 Word Quest Daily\n🏆 Boss Defeated!\n🔥 Strategy: ${MAX_GUESSES - turn}/${MAX_GUESSES} Guesses\n⚔️ Try it at https://guessaword.org`;
               } else if (gameState === 'SHOP') {
-                   text = `🏰 Word Quest RPG\n⚔️ Currently on Floor ${level} (${difficulty})\n💰 Holding ${gold} Gold\n❤️ HP: ${hp}/${maxHp}\n⚔️ Beat my run at guessaword.org`;
+                   text = `🏰 Word Quest RPG\n⚔️ Currently on Floor ${level} (${difficulty})\n💰 Holding ${gold} Gold\n❤️ HP: ${hp}/${maxHp}\n⚔️ Beat my run at https://guessaword.org`;
               } else {
-                   text = `🏰 Word Quest RPG\n💀 Died on Floor ${level} (${difficulty})\n💰 Collected ${gold} Gold\n⚔️ Try to beat me at guessaword.org`;
+                   text = `🏰 Word Quest RPG\n💀 Died on Floor ${level} (${difficulty})\n💰 Collected ${gold} Gold\n⚔️ Try to beat me at https://guessaword.org`;
               }
             const textArea = document.createElement("textarea");
             textArea.value = text;
