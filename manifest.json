@@ -1,8 +1,11 @@
 {
   "name": "Guess A Word: The Cursed Tower",
   "short_name": "GuessAWord",
+  "description": "Climb the Cursed Tower in this daily word puzzle game.",
   "start_url": "/",
+  "id": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#121212",
   "theme_color": "#00ff00",
   "icons": [
