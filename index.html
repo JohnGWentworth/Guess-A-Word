@@ -398,13 +398,6 @@
           </div>
         );
 
-        const AdContainer = ({ location }) => (
-          <div className={`w-full max-w-lg mx-auto bg-slate-900/50 border border-dashed border-slate-700 flex flex-col items-center justify-center p-4 my-2 text-slate-600 text-xs text-center ${location === 'interstitial' ? 'h-64' : 'h-16'}`}>
-            <span className="uppercase font-bold tracking-widest">Advertisement Space ({location})</span>
-            <span>(This area is ready for AdSense/AdMob)</span>
-          </div>
-        );
-
         const TextModal = ({ title, content, onClose }) => (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
             <div className="bg-slate-900 border border-slate-600 rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto flex flex-col shadow-2xl">
@@ -1308,8 +1301,6 @@
                       <h2 className="text-2xl font-serif text-yellow-100">The Merchant</h2>
                     </div>
 
-                    <AdContainer location="banner" />
-
                     <div className="grid gap-3 mt-4">
                       {SHOP_ITEMS.map(item => (
                         <button 
@@ -1376,8 +1367,6 @@
                   </div>
                 )}
               </div>
-
-              <AdContainer location="banner" />
 
               {/* Game Grid */}
               <Grid 
