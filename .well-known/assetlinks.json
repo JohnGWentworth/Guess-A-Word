@@ -1,8 +1,17 @@
-[{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "org.guessaword.www.twa",
-        "sha256_cert_fingerprints": ["63:01:13:DC:21:BB:5A:E8:DB:92:E1:FC:51:B8:B8:F7:4C:E9:68:B5:7F:CA:81:A4:4B:02:3D:12:4F:CB:DA:46"]
-      }
-    }]
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "org.guessaword.www.twa",
+      "sha256_cert_fingerprints": ["63:01:13:DC:21:BB:5A:E8:DB:92:E1:FC:51:B8:B8:F7:4C:E9:68:B5:7F:CA:81:A4:4B:02:3D:12:4F:CB:DA:46"]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "windows_app",
+      "package_family_name": "JohnGGames.Guess-A-WordTheCursedTower_4t7qja0sksd6m"
+    }
+  }
+]
