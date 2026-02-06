@@ -11,7 +11,7 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "windows_app",
-      "package_family_name": "JohnGGames.Guess-A-WordTheCursedTower_4t7qja0sksd6m"
+      "package_family_name": "JohnGGames.GuessAWordRPG_4t7qja0sksd6m"
     }
   }
 ]
