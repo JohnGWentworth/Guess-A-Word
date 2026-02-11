@@ -4,7 +4,7 @@
     "target": {
       "namespace": "android_app",
       "package_name": "org.guessaword.www.twa",
-      "sha256_cert_fingerprints": ["EB:2B:BF:4F:14:67:3A:0E:D5:E2:25:B4:60:FC:78:22:CB:E7:AA:93:C3:E3:85:C7:75:9A:B2:E4:F2:27:A4:F3"]
+      "sha256_cert_fingerprints": ["F2:E1:7C:8E:7F:E1:78:DA:EA:83:06:91:5B:D1:12:3A:3D:E9:27:44:FA:8E:52:5A:0A:46:1E:70:69:28:D9:C2"]
     }
   },
   {
